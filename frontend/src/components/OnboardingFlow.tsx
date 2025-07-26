@@ -4,17 +4,13 @@ import { Camera, Wallet, TrendingUp, Globe } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import heroImage from "@/assets/hero-receipt-scan.jpg";
 
-interface OnboardingFlowProps {
-  onSignIn?: () => void;
-}
-
-export const OnboardingFlow = ({ onSignIn }: OnboardingFlowProps) => {
+export const OnboardingFlow = () => {
   const { signInWithGoogle, loading } = useAuth();
 
   const handleGoogleSignIn = async () => {
     try {
       await signInWithGoogle();
-      onSignIn?.();
+      // The auth state will handle the redirect to 2FA verification
     } catch (error) {
       // Error is already handled in the useAuth hook
       console.error('Sign-in error:', error);
