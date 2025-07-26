@@ -17,8 +17,8 @@ export const BottomNav = ({ activeTab, onTabChange }: BottomNavProps) => {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-card border-t shadow-elevated z-50">
-      <div className="grid grid-cols-5 h-16">
+    <nav className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-md border-t border-border/50 shadow-elevated z-50">
+      <div className="grid grid-cols-5 h-20 px-2 pb-2">
         {navItems.map((item) => {
           const IconComponent = item.icon;
           const isActive = activeTab === item.id;
@@ -28,14 +28,34 @@ export const BottomNav = ({ activeTab, onTabChange }: BottomNavProps) => {
               key={item.id}
               variant="ghost"
               onClick={() => onTabChange(item.id)}
-              className={`h-full rounded-none flex flex-col gap-1 p-2 ${
+              className={`group relative h-full rounded-xl flex flex-col gap-1 p-2 transition-all duration-200 ${
                 isActive 
-                  ? "text-primary bg-primary/5" 
-                  : "text-muted-foreground hover:text-foreground"
+                  ? "bg-primary text-white shadow-sm hover:bg-primary hover:text-white" 
+                  : "text-muted-foreground hover:text-primary hover:bg-primary/10"
               }`}
             >
-              <IconComponent className={`h-5 w-5 ${isActive ? "scale-110" : ""} transition-transform`} />
-              <span className="text-xs font-medium">{item.label}</span>
+              {/* Active indicator */}
+              {isActive && (
+                <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-white rounded-full" />
+              )}
+              
+              <IconComponent 
+                className={`h-5 w-5 transition-all duration-200 ${
+                  isActive 
+                    ? "scale-110 text-white" 
+                    : "scale-100 group-hover:text-primary"
+                }`} 
+              />
+              <span className={`text-xs font-medium transition-colors duration-200 ${
+                isActive ? "text-white" : "group-hover:text-primary"
+              }`}>
+                {item.label}
+              </span>
+              
+              {/* Subtle glow effect for active state */}
+              {isActive && (
+                <div className="absolute inset-0 rounded-xl bg-gradient-to-t from-white/10 to-transparent pointer-events-none" />
+              )}
             </Button>
           );
         })}

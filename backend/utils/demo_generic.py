@@ -80,10 +80,10 @@ class DemoGeneric:
             if e.status_code != 404:
                 # Something else went wrong...
                 print(e.error_details)
-                return f"{issuer_id}.{class_suffix}"
+                return f"{class_suffix}"
         else:
             print(f"Class {issuer_id}.{class_suffix} already exists!")
-            return f"{issuer_id}.{class_suffix}"
+            return f"{class_suffix}"
 
         # See link below for more information on required properties
         # https://developers.google.com/wallet/generic/rest/v1/genericclass
@@ -94,7 +94,7 @@ class DemoGeneric:
         print("Class insert response")
         print(response)
 
-        return f"{issuer_id}.{class_suffix}"
+        return f"{class_suffix}"
 
     # [END createClass]
 
@@ -247,10 +247,10 @@ class DemoGeneric:
             if e.status_code != 404:
                 # Something else went wrong...
                 print(e.error_details)
-                return f"{issuer_id}.{object_suffix}"
+                return object_suffix
         else:
             print(f"Object {issuer_id}.{object_suffix} already exists!")
-            return f"{issuer_id}.{object_suffix}"
+            return object_suffix
 
         # See link below for more information on required properties
         # https://developers.google.com/wallet/generic/rest/v1/genericobject
@@ -265,7 +265,7 @@ class DemoGeneric:
         print("Object insert response")
         print(response)
 
-        return f"{issuer_id}.{object_suffix}"
+        return object_suffix
 
     # [END createObject]
 
