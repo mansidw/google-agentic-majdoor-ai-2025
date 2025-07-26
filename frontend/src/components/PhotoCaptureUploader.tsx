@@ -103,7 +103,7 @@ export const PhotoCaptureUploader: React.FC<PhotoCaptureUploaderProps> = ({
               height={300}
               style={{ display: "none" }}
             />
-            <Button onClick={handleCapture} className="w-full mb-2">
+            <Button onClick={handleCapture} className="w-full mb-2 bg-primary text-white border-primary hover:bg-white hover:text-primary hover:border-primary">
               Capture Photo
             </Button>
             <Button variant="outline" onClick={() => {
@@ -129,7 +129,7 @@ export const PhotoCaptureUploader: React.FC<PhotoCaptureUploaderProps> = ({
             />
             <Button
               onClick={handleUpload}
-              className="w-full mb-2"
+              className="w-full mb-2 bg-primary text-white border-primary hover:bg-white hover:text-primary hover:border-primary"
               disabled={loading}
             >
               {loading ? "Uploading..." : "Upload Photo"}
