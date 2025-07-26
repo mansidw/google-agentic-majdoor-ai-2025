@@ -3,7 +3,10 @@ import { it } from "node:test";
 
 // TypeScript function to transform IMockReceiptData to abc.json schema
 export function transformReceiptToWalletObject(receipt: IMockReceiptData) {
-  const receipt_items = receipt.items.map((item) => item.description) ?? [];
+  const receipt_items =
+    receipt.items.map((item) => {
+      return `${item.description} (${item.price})`;
+    }) ?? [];
 
   return {
     state: "ACTIVE",
