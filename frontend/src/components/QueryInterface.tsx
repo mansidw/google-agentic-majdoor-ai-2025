@@ -102,7 +102,7 @@ export const QueryInterface = () => {
             >
               <Mic className="h-4 w-4" />
             </Button>
-            <Button type="submit" size="icon">
+            <Button type="submit" size="icon" className="bg-primary text-white border-primary hover:bg-white hover:text-primary hover:border-primary">
               <Send className="h-4 w-4" />
             </Button>
           </div>
