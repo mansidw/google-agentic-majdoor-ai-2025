@@ -1,0 +1,211 @@
+import React, { useState, useRef } from 'react';
+
+const BACKEND_URL = 'http://127.0.0.1:5000/offers';
+const SESSION_ID = 'mcp-session-84427bd6-fc37-48b1-96e9-14116c131fd5';
+
+const ChatbotSiri: React.FC = () => {
+  const [open, setOpen] = useState(false);
+  const [listening, setListening] = useState(false);
+  const [transcript, setTranscript] = useState('');
+  const [response, setResponse] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const recognitionRef = useRef<any>(null);
+
+  // Start speech recognition
+  const startListening = () => {
+    setTranscript('');
+    setResponse(null);
+    setListening(true);
+    if (!('webkitSpeechRecognition' in window)) {
+      alert('Speech recognition not supported in this browser.');
+      setListening(false);
+      return;
+    }
+    const recognition = new (window as any).webkitSpeechRecognition();
+    recognition.lang = 'en-US';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+    recognition.onresult = (event: any) => {
+      const text = event.results[0][0].transcript;
+      setTranscript(text);
+      setListening(false);
+      sendToBackend(text);
+    };
+    recognition.onerror = () => {
+      setListening(false);
+    };
+    recognition.onend = () => {
+      setListening(false);
+    };
+    recognitionRef.current = recognition;
+    recognition.start();
+  };
+
+  // Send transcript to backend
+  const sendToBackend = async (text: string) => {
+    setLoading(true);
+    try {
+      const res = await fetch(BACKEND_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: SESSION_ID, request: text }),
+      });
+      const data = await res.json();
+      // If offers are present, format them for display and voice
+      if (data.offers && Array.isArray(data.offers) && data.offers.length > 0) {
+        const offersText = data.offers.map((offer: any, idx: number) =>
+          `${idx + 1}. ${offer.vendor} (${offer.credit_card}): ${offer.offer}`
+        ).join('\n');
+        setResponse(offersText);
+        // Speak the offers
+        speakOffers(data.offers);
+      } else if (data.response) {
+        setResponse(data.response);
+        speakText(data.response);
+      } else {
+        setResponse(JSON.stringify(data));
+        speakText(JSON.stringify(data));
+      }
+    } catch (e) {
+      setResponse('Error contacting backend.');
+      speakText('Sorry, there was an error contacting the backend.');
+    }
+    setLoading(false);
+  };
+
+  // Speak a summary of the offers
+  const speakOffers = (offers: any[]) => {
+    if (!window.speechSynthesis) return;
+    const summary = offers.slice(0, 3).map((offer: any) =>
+      `${offer.vendor} with your ${offer.credit_card}: ${offer.offer.replace(/\u20b9/g, 'rupees ')}`
+    ).join('. Next, ');
+    const utter = new window.SpeechSynthesisUtterance(
+      `Here are some offers I found. ${summary}. Would you like to hear more?`
+    );
+    utter.rate = 1;
+    utter.pitch = 1.1;
+    window.speechSynthesis.speak(utter);
+  };
+
+  // Speak a generic text
+  const speakText = (text: string) => {
+    if (!window.speechSynthesis) return;
+    const utter = new window.SpeechSynthesisUtterance(text);
+    utter.rate = 1;
+    utter.pitch = 1.1;
+    window.speechSynthesis.speak(utter);
+  };
+
+  // Close modal and stop recognition
+  const handleClose = () => {
+    setOpen(false);
+    setListening(false);
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+    }
+    // Stop any ongoing speech synthesis
+    if (window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+  };
+
+  return (
+    <>
+      {/* Floating Button */}
+      <button
+        onClick={() => { setOpen(true); setTimeout(startListening, 400); }}
+        style={{
+          position: 'fixed',
+          right: 24,
+          bottom: 24,
+          zIndex: 1000,
+          width: 64,
+          height: 64,
+          borderRadius: '50%',
+          background: 'linear-gradient(135deg, #4f8cff, #a259ff)',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
+          border: 'none',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+        aria-label="Open Chatbot"
+      >
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M12 8v4" /><path d="M12 16h.01" /></svg>
+      </button>
+
+      {/* Fullscreen Modal */}
+      {open && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(30, 34, 44, 0.95)',
+            zIndex: 2000,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'background 0.3s',
+          }}
+        >
+          <button
+            onClick={handleClose}
+            style={{
+              position: 'absolute',
+              top: 32,
+              right: 32,
+              background: 'transparent',
+              border: 'none',
+              color: '#fff',
+              fontSize: 32,
+              cursor: 'pointer',
+            }}
+            aria-label="Close"
+          >
+            ×
+          </button>
+
+          {/* Siri-style animated listening effect */}
+          <div style={{ marginBottom: 32 }}>
+            <div className={`siri-wave ${listening ? 'listening' : ''}`} />
+          </div>
+
+          <div style={{ color: '#fff', fontSize: 24, marginBottom: 16 }}>
+            {listening ? 'Listening...' : transcript ? `You said: "${transcript}"` : 'Tap to speak'}
+          </div>
+
+          {loading && <div style={{ color: '#fff', fontSize: 18 }}>Thinking...</div>}
+          {response && (
+            <div style={{ color: '#fff', fontSize: 20, marginTop: 24, whiteSpace: 'pre-line' }}>
+              {response}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Siri Wave Animation Styles */}
+      <style>{`
+        .siri-wave {
+          width: 120px;
+          height: 120px;
+          border-radius: 50%;
+          background: radial-gradient(circle at 60% 40%, #a259ff 0%, #4f8cff 100%);
+          box-shadow: 0 0 32px 8px #a259ff55;
+          position: relative;
+          animation: pulse 1.5s infinite;
+        }
+        .siri-wave.listening {
+          animation: pulse 0.7s infinite alternate;
+        }
+        @keyframes pulse {
+          0% { transform: scale(1); box-shadow: 0 0 32px 8px #a259ff55; }
+          100% { transform: scale(1.15); box-shadow: 0 0 48px 16px #4f8cff88; }
+        }
+      `}</style>
+    </>
+  );
+};
+
+export default ChatbotSiri; 

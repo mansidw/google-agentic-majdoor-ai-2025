@@ -23,8 +23,15 @@ export const PhotoCaptureUploader: React.FC<PhotoCaptureUploaderProps> = ({
 
   React.useEffect(() => {
     if (!captured && navigator.mediaDevices) {
+      const constraints = {
+        video: {
+          facingMode: { ideal: "environment" }, // Prefer back camera
+          width: { ideal: 400 },
+          height: { ideal: 300 }
+        }
+      };
       navigator.mediaDevices
-        .getUserMedia({ video: true })
+        .getUserMedia(constraints)
         .then((stream) => {
           setMediaStream(stream);
           if (videoRef.current) {
