@@ -6,7 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import { Camera, Upload, FileText, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-interface IMockReceiptData {
+export interface IMockReceiptData {
   currency: string;
   date: string;
   merchant: string;
