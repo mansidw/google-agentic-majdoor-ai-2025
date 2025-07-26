@@ -2,74 +2,89 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { Send, Mic, Globe, MessageSquare } from "lucide-react";
+import { Send, Mic, Globe, MessageSquare, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { chatService } from "@/services/chatService";
+import { useAuthContext } from "@/contexts/AuthContext";
+import { MarkdownRenderer } from "@/components/MarkdownRenderer";
 
 export const QueryInterface = () => {
   const [query, setQuery] = useState("");
-  const [responses, setResponses] = useState<Array<{ query: string; response: string; language: string }>>([]);
+  const [responses, setResponses] = useState<Array<{ query: string; response: string; rephrased_question?: string; timestamp: Date }>>([]);
   const [isListening, setIsListening] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const { user } = useAuthContext();
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!query.trim()) return;
+    if (!query.trim() || isLoading) return;
 
     const currentQuery = query;
     setQuery("");
+    setIsLoading(true);
 
-    // Mock AI response with language detection
-    const mockResponses = {
-      'क्या मेरे पास दाल है?': {
-        response: "हाँ, आपने पिछले हफ्ते ₹85 की दाल खरीदी थी। यह आपकी खरीदारी सूची में है।",
-        language: "Hindi"
-      },
-      'what did I spend on groceries?': {
-        response: "You spent $342 on groceries this month, which is 45% of your total spending.",
-        language: "English"
-      },
-      'default': {
-        response: "Based on your receipts, I can help you track that item or spending category. Would you like me to create a pass for it?",
-        language: "English"
-      }
-    };
+    try {
+      toast({
+        title: "Processing Query",
+        description: "Analyzing your question with AI...",
+      });
 
-    const response = mockResponses[currentQuery.toLowerCase() as keyof typeof mockResponses] || mockResponses.default;
-    
-    setTimeout(() => {
+      const result = await chatService.sendMessage(currentQuery, user?.uid);
+      
       setResponses(prev => [...prev, { 
         query: currentQuery, 
-        response: response.response,
-        language: response.language 
+        response: result.response,
+        rephrased_question: result.rephrased_question,
+        timestamp: new Date()
       }]);
-    }, 1000);
 
-    toast({
-      title: "Processing Query",
-      description: "Analyzing your question with AI...",
-    });
+      toast({
+        title: "Response Received",
+        description: "AI has analyzed your query successfully.",
+      });
+
+    } catch (error) {
+      console.error('Error sending message:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to process your query. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleVoiceInput = () => {
+    if (isLoading) return;
+    
     setIsListening(!isListening);
     if (!isListening) {
       toast({
         title: "Voice Input",
         description: "Listening... Speak your question",
       });
-      // Simulate voice input
+      // Simulate voice input for demo purposes
+      // In a real implementation, you would integrate with Web Speech API
       setTimeout(() => {
         setIsListening(false);
         setQuery("What did I spend on groceries this month?");
+        toast({
+          title: "Voice Captured",
+          description: "Voice input converted to text",
+        });
       }, 3000);
     }
   };
 
   const suggestedQueries = [
+    "What did I spend on groceries this month?",
+    "Show me my recent receipts",
     "क्या मेरे पास दाल है?",
-    "What did I spend on groceries?",
-    "Show me this week's receipts",
-    "¿Cuánto gasté en restaurantes?"
+    "Create a shopping list for me",
+    "What offers are available for me?",
+    "Analyze my spending patterns"
   ];
 
   return (
@@ -92,6 +107,7 @@ export const QueryInterface = () => {
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Ask about your receipts... (English, हिंदी, etc.)"
               className="flex-1"
+              disabled={isLoading}
             />
             <Button 
               type="button" 
@@ -99,11 +115,12 @@ export const QueryInterface = () => {
               size="icon"
               onClick={handleVoiceInput}
               className={isListening ? "bg-destructive text-destructive-foreground" : ""}
+              disabled={isLoading}
             >
               <Mic className="h-4 w-4" />
             </Button>
-            <Button type="submit" size="icon" className="bg-primary text-white border-primary hover:bg-white hover:text-primary hover:border-primary">
-              <Send className="h-4 w-4" />
+            <Button type="submit" size="icon" className="bg-primary text-white border-primary hover:bg-white hover:text-primary hover:border-primary" disabled={isLoading}>
+              {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             </Button>
           </div>
         </form>
@@ -119,6 +136,7 @@ export const QueryInterface = () => {
                 size="sm"
                 onClick={() => setQuery(suggestion)}
                 className="text-xs"
+                disabled={isLoading}
               >
                 {suggestion}
               </Button>
@@ -128,12 +146,28 @@ export const QueryInterface = () => {
       </Card>
 
       {/* Query Responses */}
-      {responses.length > 0 && (
+      {(responses.length > 0 || isLoading) && (
         <div className="space-y-4">
           <h4 className="font-medium text-foreground flex items-center gap-2">
             <MessageSquare className="h-4 w-4" />
             Recent Queries
           </h4>
+          
+          {/* Loading indicator */}
+          {isLoading && (
+            <Card className="p-4 animate-fade-in bg-card border-0 shadow-card">
+              <div className="flex items-center gap-3">
+                <div className="p-1 bg-primary/10 rounded text-xs px-2 text-primary">
+                  AI
+                </div>
+                <div className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <p className="text-sm text-muted-foreground">Processing your query...</p>
+                </div>
+              </div>
+            </Card>
+          )}
+          
           {responses.map((item, index) => (
             <Card key={index} className="p-4 animate-fade-in bg-card border-0 shadow-card">
               <div className="space-y-3">
@@ -149,15 +183,20 @@ export const QueryInterface = () => {
                     AI
                   </div>
                   <div className="flex-1">
-                    <p className="text-sm text-card-foreground">{item.response}</p>
+                    <MarkdownRenderer content={item.response} />
                     <div className="flex items-center gap-2 mt-2">
-                      <span className="text-xs text-muted-foreground">
-                        Detected: {item.language}
+                      {item.rephrased_question && (
+                        <span className="text-xs text-muted-foreground">
+                          Interpreted as: "{item.rephrased_question}"
+                        </span>
+                      )}
+                      <span className="text-xs text-muted-foreground ml-auto">
+                        {item.timestamp.toLocaleTimeString()}
                       </span>
-                      <Button size="sm" variant="outline" className="text-xs">
-                        Create Pass
-                      </Button>
                     </div>
+                    <Button size="sm" variant="outline" className="text-xs mt-2">
+                      Create Pass
+                    </Button>
                   </div>
                 </div>
               </div>
