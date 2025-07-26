@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
-import { Camera, Menu, User } from "lucide-react";
+import { User } from "lucide-react";
+import { NotificationsDropdown } from "./NotificationsDropdown";
 import appIcon from "@/assets/app-icon.jpg";
 
 export const Header = () => {
@@ -12,9 +13,7 @@ export const Header = () => {
         </div>
         
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" className="h-10 w-10">
-            <Camera className="h-5 w-5" />
-          </Button>
+          <NotificationsDropdown />
           <Button variant="ghost" size="icon" className="h-10 w-10">
             <User className="h-5 w-5" />
           </Button>

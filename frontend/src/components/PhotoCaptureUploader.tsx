@@ -23,8 +23,15 @@ export const PhotoCaptureUploader: React.FC<PhotoCaptureUploaderProps> = ({
 
   React.useEffect(() => {
     if (!captured && navigator.mediaDevices) {
+      const constraints = {
+        video: {
+          facingMode: { ideal: "environment" }, // Prefer back camera
+          width: { ideal: 400 },
+          height: { ideal: 300 }
+        }
+      };
       navigator.mediaDevices
-        .getUserMedia({ video: true })
+        .getUserMedia(constraints)
         .then((stream) => {
           setMediaStream(stream);
           if (videoRef.current) {
@@ -96,7 +103,7 @@ export const PhotoCaptureUploader: React.FC<PhotoCaptureUploaderProps> = ({
               height={300}
               style={{ display: "none" }}
             />
-            <Button onClick={handleCapture} className="w-full mb-2">
+            <Button onClick={handleCapture} className="w-full mb-2 bg-primary text-white border-primary hover:bg-white hover:text-primary hover:border-primary">
               Capture Photo
             </Button>
             <Button variant="outline" onClick={() => {
@@ -122,7 +129,7 @@ export const PhotoCaptureUploader: React.FC<PhotoCaptureUploaderProps> = ({
             />
             <Button
               onClick={handleUpload}
-              className="w-full mb-2"
+              className="w-full mb-2 bg-primary text-white border-primary hover:bg-white hover:text-primary hover:border-primary"
               disabled={loading}
             >
               {loading ? "Uploading..." : "Upload Photo"}
