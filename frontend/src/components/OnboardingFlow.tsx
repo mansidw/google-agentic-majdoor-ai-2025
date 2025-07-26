@@ -26,7 +26,7 @@ export const OnboardingFlow = ({ onSignIn }: OnboardingFlowProps) => {
     }, 2000);
   };
   return (
-    <div className="min-h-screen bg-gradient-primary">
+    <div className="min-h-screen bg-primary">
       <div className="container mx-auto px-4 pt-8">
         {/* Hero Section */}
         <div className="text-center mb-8">
