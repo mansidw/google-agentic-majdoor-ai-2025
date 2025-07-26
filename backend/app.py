@@ -21,6 +21,7 @@ from utils.helper_tools import (
     identify_perishable_items,
     create_recipe_from_ingredients,
 )
+from utils.recommendations import get_card_recommendations
 
 from google.adk.agents import Agent
 from google.adk.runners import Runner
@@ -362,6 +363,17 @@ def get_offers():
         "intent": intent,
         "user_request": user_request
     })
+
+
+@app.route("/recommend_card", methods=["POST"])
+def recommend_card():
+    req = request.get_json(force=True)
+    session_id = req.get("session_id") or get_session_id()
+    try:
+        category, cards = get_card_recommendations(session_id)
+        return jsonify({"category": category, "recommended_cards": [cards[0]], "session_id": session_id})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
     app.run(debug=True)
