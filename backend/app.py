@@ -21,6 +21,8 @@ from utils.helper_tools import (
     identify_perishable_items,
     create_recipe_from_ingredients,
 )
+from utils.recommendations import get_card_recommendations
+
 from googleapiclient.discovery import build
 from google.oauth2 import service_account
 import datetime
@@ -367,6 +369,17 @@ def get_offers():
         "user_request": user_request
     })
 
+
+@app.route("/recommend_card", methods=["POST"])
+def recommend_card():
+    req = request.get_json(force=True)
+    session_id = req.get("session_id") or get_session_id()
+    try:
+        category, cards = get_card_recommendations(session_id)
+        return jsonify({"category": category, "recommended_cards": [cards[0]], "session_id": session_id})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+        
 def fetch_wallet_passes(class_id: str) -> List[Dict[str, Any]]:
     """
     Fetches all generic pass objects for a given class ID from the Google Wallet API.
@@ -380,7 +393,7 @@ def fetch_wallet_passes(class_id: str) -> List[Dict[str, Any]]:
     print(f"Attempting to fetch passes for class: {class_id}")
     
     if not os.path.exists(SERVICE_ACCOUNT_FILE_PATH):
-        print(f"❌ Service account key file not found at: {SERVICE_ACCOUNT_FILE_PATH}")
+        print(f"Service account key file not found at: {SERVICE_ACCOUNT_FILE_PATH}")
         # In an API context, we return an empty list instead of raising a FileNotFoundError
         # to prevent the server from crashing. The error is logged to the console.
         return []
@@ -479,78 +492,94 @@ def get_all_passes_for_classes(class_suffixes: List[str]) -> List[Dict[str, Any]
         all_passes.extend(passes)
     return all_passes
 
+# --- GET API for expenditure summary with filter ---
+@app.route('/expenditure/summary', methods=['GET'])
+def get_expenditure_summary():
+    """
+    Returns totalSpent, totalPasses, averagePassesPerDay, totalCategories, and categoryData
+    based on a filter: daily, weekly, monthly, yearly (passed as ?filter=period)
+    """
+    filter_period = request.args.get('filter', 'monthly').lower()
+    valid_periods = ['daily', 'weekly', 'monthly', 'yearly']
+    if filter_period not in valid_periods:
+        return jsonify({"error": f"Invalid filter '{filter_period}'. Must be one of {valid_periods}"}), 400
 
-@app.route('/expenditure/total', methods=['GET'])
-def get_total_expenditure():
-    """
-    API Endpoint 1: Calculates the total expenditure across all configured classes.
-    """
-    print("Received request for /expenditure/total")
-    # Fetch all passes from all configured classes
+    # Fetch all passes
     all_passes = get_all_passes_for_classes(CLASS_SUFFIXES)
-    
     if not all_passes:
-        return jsonify({"error": "Could not fetch any passes. Check logs for details."}), 500
-        
-    # Process passes for the 'yearly' period to include everything from the current year.
-    # To get *all-time* expenditure, you'd need a different filtering logic.
-    _, total_expenditure = process_passes_for_period(all_passes, 'yearly')
-    
+        return jsonify({"error": "Could not fetch any passes."}), 500
+
+    # Filter passes and calculate totalSpent
+    filtered_passes, total_spent = process_passes_for_period(all_passes, filter_period)
+    total_passes = len(filtered_passes)
+
+    # Calculate average passes per day
+    if total_passes == 0:
+        avg_passes_per_day = 0
+    else:
+        # Find unique days in filtered passes
+        days = set()
+        for p in filtered_passes:
+            text_modules = p.get('textModulesData', [])
+            date_module = next((m for m in text_modules if m.get('id') == 'DATE_MODULE'), None)
+            if date_module:
+                days.add(date_module.get('body'))
+        avg_passes_per_day = round(total_passes / max(len(days), 1), 2)
+
+    # Category data: group by class prefix (e.g., GroceryClass -> groceries)
+    class_suffix_to_category = {
+        "GroceryClass": "groceries",
+        "TravelClass": "travel",
+        "HealthClass": "health",
+        "EntertainmentClass": "entertainment",
+        "EducationClass": "education"
+        # Add more mappings as needed
+    }
+    category_totals = {}
+    for p in filtered_passes:
+        # Get class suffix from classId (e.g., issuer_id.GroceryClass)
+        class_id = p.get('classId', '')
+        class_suffix = None
+        if '.' in class_id:
+            parts = class_id.split('.')
+            if len(parts) >= 2:
+                class_suffix = parts[1]
+        category = class_suffix_to_category.get(class_suffix, class_suffix or 'Unknown')
+        total_module = next((m for m in p.get('textModulesData', []) if m.get('id') == 'TOTAL_MODULE'), None)
+        if total_module:
+            try:
+                amount_str = total_module.get('body', '').split()[-1]
+                amount = float(amount_str)
+            except Exception:
+                amount = 0.0
+            category_totals[category] = category_totals.get(category, 0) + amount
+
+
+    import re
+    category_data = []
+    print(category_totals)
+    for name in class_suffix_to_category.keys():
+        raw_amount = category_totals.get(class_suffix_to_category[name], 0)
+        # Ensure amount is always a float
+        if isinstance(raw_amount, str):
+            amount_str = re.sub(r'[^\d\.]', '', raw_amount)
+            try:
+                amount = float(amount_str) if amount_str else 0.0
+            except Exception:
+                amount = 0.0
+        else:
+            amount = float(raw_amount)
+        category_data.append({"name": class_suffix_to_category[name], "amount": amount})
+    total_categories = len(category_data)
+
     return jsonify({
-        "total_expenditure_current_year": total_expenditure,
-        "total_passes_fetched": len(all_passes)
+        "totalSpent": round(total_spent, 2),
+        "totalPasses": total_passes,
+        "averagePassesPerDay": avg_passes_per_day,
+        "totalCategories": total_categories,
+        "categoryData": category_data
     })
 
-
-@app.route('/expenditure/period', methods=['GET'])
-def get_period_expenditure():
-    """
-    API Endpoint 2: Calculates total expenditure for a specific period (daily, weekly, etc.).
-    The period is passed as a URL query parameter, e.g., /expenditure/period?p=weekly
-    """
-    period = request.args.get('p', 'weekly') # Default to 'weekly' if not provided
-    print(f"Received request for /expenditure/period with period: {period}")
-    
-    try:
-        # Fetch all passes from all configured classes
-        all_passes = get_all_passes_for_classes(CLASS_SUFFIXES)
-
-        if not all_passes:
-            return jsonify({"error": "Could not fetch any passes. Check logs for details."}), 500
-
-        # Process the fetched passes for the specified period
-        filtered_passes, total_expenditure = process_passes_for_period(all_passes, period)
-        
-        return jsonify({
-            "period": period,
-            "total_expenditure": total_expenditure,
-            "pass_count": len(filtered_passes)
-        })
-    except ValueError as e:
-        return jsonify({"error": str(e)}), 400
-
-
-@app.route('/expenditure/class-wise', methods=['GET'])
-def get_class_wise_expenditure():
-    """
-    API Endpoint 3: Calculates total expenditure for each class individually.
-    """
-    print("Received request for /expenditure/class-wise")
-    expenditure_by_class = {}
-    
-    for suffix in CLASS_SUFFIXES:
-        full_class_id = f"{issuer_id}.{suffix}"
-        class_passes = fetch_wallet_passes(full_class_id)
-        
-        # Calculate total for the passes of this specific class (again, using 'yearly' for this example)
-        _, total_expenditure = process_passes_for_period(class_passes, 'yearly')
-        
-        expenditure_by_class[full_class_id] = {
-            "total_expenditure_current_year": total_expenditure,
-            "pass_count": len(class_passes)
-        }
-        
-    return jsonify({"expenditure_by_class": expenditure_by_class})
 
 # --- API to compare expenditure for this month and previous month ---
 @app.route('/expenditure/monthly-comparison', methods=['GET'])
@@ -861,6 +890,133 @@ def check_verification():
     except Exception as e:
         print(f"Error checking verification: {str(e)}")
         return jsonify({"error": "Internal server error"}), 500
+# --- POST API to call Gemini for data insights ---
+@app.route('/api/data-insights', methods=['POST'])
+
+# --- Helper function for insights generation ---
+def generate_insights_data():
+    """
+    Generates insights data using Gemini API and Google Wallet passes.
+    Returns a Python dict (not a Flask response).
+    """
+    all_passes = []
+    for suffix in CLASS_SUFFIXES:
+        full_class_id = f"{issuer_id}.{suffix}"
+        class_passes = fetch_wallet_passes(full_class_id)
+        all_passes.extend(class_passes)
+    prompt = (
+        "You are an expert data insights provider agent. Analyze the provided list of dictionary. "
+        "It contains details related to some kind of expenditure. Refer to tags (if present): 'items', 'textModulesData' and generate a JSON object with insights on following topics:\n"
+        "    1. 'expenditure' — a short spending tip or alert.\n"
+        "    2. 'perishables' — a list of items about to expire soon.\n"
+        "    3. 'health' — a tip or reminder about food diversity, freshness or wellness.\n"
+        "    4. 'recipes' — suggest a recipe to reduce waste.\n"
+        "Respond ONLY with a valid JSON object. Do not include any other text, explanations, or markdown formatting like ```json.\n"
+        "\nExample output:\n"
+        "{\n"
+        "  \"expenditure\": \"You’ve made several high-value purchases like a dining table and Bluetooth Care devices. Consider categorizing luxury and recurring expenses separately to improve budget clarity.\",\n"
+        "  \"perishables\": [\n"
+        "    \"BANANAS (purchased in 2021) — likely expired\",\n"
+        "    \"Chapati (2025-03-30) — may be stale\",\n"
+        "    \"Mineral Water (2025-03-30) — check for seal and expiry date\"\n"
+        "  ],\n"
+        "  \"health\": \"While your meals include thalis and fruits like bananas, consider adding more fresh vegetables and avoiding frequent alcohol purchases to maintain a balanced diet.\",\n"
+        "  \"recipes\": {\n"
+        "    \"recipe_name\": \"Banana-Chapati Pancakes\",\n"
+        "    \"description\": \"Use ripe or leftover bananas and chapatis to create a nutritious, waste-free breakfast.\",\n"
+        "    \"ingredients\": [\n"
+        "      \"2 ripe bananas\",\n"
+        "      \"2 chapatis (torn into small pieces)\",\n"
+        "      \"1 egg or egg substitute\",\n"
+        "      \"1/4 cup milk\",\n"
+        "      \"1 tsp honey\",\n"
+        "      \"Pinch of cinnamon\"\n"
+        "    ],\n"
+        "    \"instructions\": [\n"
+        "      \"Mash the bananas in a bowl.\",\n"
+        "      \"Add milk, egg, honey, and cinnamon. Mix well.\",\n"
+        "      \"Add torn chapati pieces and let soak for 5 minutes.\",\n"
+        "      \"Heat a pan and cook the mixture like pancakes on both sides.\",\n"
+        "      \"Serve warm with yogurt or fruit.\"\n"
+        "    ]\n"
+        "  }\n"
+        "}\n"
+    )
+    try:
+        model = genai.GenerativeModel("gemini-2.0-flash")
+        response = model.generate_content([prompt, json.dumps(all_passes)])
+        response_text = response.text
+        if response_text and response_text.startswith("```json"):
+            response_text = response_text.strip().replace("```json", "").replace("```", "")
+        if response_text:
+            try:
+                insights = json.loads(response_text)
+                return insights
+            except Exception:
+                return {"error": "Model response was not valid JSON.", "raw": response_text}
+        else:
+            return {"error": "No response text received from the model."}
+    except Exception as e:
+        return {"error": f"Gemini API call failed: {str(e)}"}
+
+# --- Flask route uses jsonify ---
+@app.route('/api/data-insights', methods=['POST'])
+def get_data_insights():
+    """
+    POST endpoint to analyze expenditure data using Gemini API and a custom prompt.
+    """
+    insights = generate_insights_data()
+    if 'error' in insights:
+        return jsonify(insights), 500
+    return jsonify(insights)
+    
+from apscheduler.schedulers.background import BackgroundScheduler
+def run_insight_cron():
+    # Prepare your data for insights (fetch from DB or API as needed)
+    insights = generate_insights_data()
+    # Create or update Google Wallet pass
+    wallet_service = DemoGeneric()
+    issuer_id = os.getenv("ISSUER_ID")
+    class_suffix = "InsightClass"
+    object_suffix = "insight_object"
+    object_data = {
+        "id": f"{issuer_id}.{object_suffix}",
+        "classId": f"{issuer_id}.{class_suffix}",
+        "state": "ACTIVE",
+        "cardTitle": {
+            "defaultValue": {
+                "language": "en-US",
+                "value": "Insights"
+            }
+        },
+        "header": {
+            "defaultValue": {"language": "en-US", "value": "Receipt Details"}
+        },
+        "hexBackgroundColor": "#4285f4",
+        "logo": {
+            "sourceUri": {
+                "uri": "https://storage.googleapis.com/wallet-lab-tools-codelab-artifacts-public/pass_google_logo.jpg"
+            },
+            "contentDescription": {
+                "defaultValue": {"language": "en-US", "value": "Generic card logo"}
+            }
+        },
+        "barcode": {
+            "type": "QR_CODE",
+            "value": json.dumps(insights)
+        },
+        "textModulesData": [
+            {"header": "Insights", "body": json.dumps(insights), "id": "INSIGHTS_MODULE"}
+        ]
+    }
+    wallet_service.create_object(issuer_id, class_suffix, object_suffix, object_data)
+
+# Scheduler setup
+scheduler = BackgroundScheduler()
+scheduler.add_job(run_insight_cron, 'interval', minutes=2)
+scheduler.start()
+
+
 
 if __name__ == "__main__":
     app.run(debug=True)
