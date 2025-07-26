@@ -556,7 +556,9 @@ def get_expenditure_summary():
     class_suffix_to_category = {
         "GroceryClass": "groceries",
         "TravelClass": "travel",
-        "HealthClass": "health"
+        "HealthClass": "health",
+        "EntertainmentClass": "entertainment",
+        "EducationClass": "education"
         # Add more mappings as needed
     }
     category_totals = {}
@@ -576,12 +578,24 @@ def get_expenditure_summary():
                 amount = float(amount_str)
             except Exception:
                 amount = 0.0
-            category_totals[category] = category_totals.get(category, 0.0) + amount
+            category_totals[category] = category_totals.get(category, 0) + amount
 
-    category_data = [
-        {"name": name, "amount": round(amount, 2)}
-        for name, amount in category_totals.items()
-    ]
+
+    import re
+    category_data = []
+    print(category_totals)
+    for name in class_suffix_to_category.keys():
+        raw_amount = category_totals.get(class_suffix_to_category[name], 0)
+        # Ensure amount is always a float
+        if isinstance(raw_amount, str):
+            amount_str = re.sub(r'[^\d\.]', '', raw_amount)
+            try:
+                amount = float(amount_str) if amount_str else 0.0
+            except Exception:
+                amount = 0.0
+        else:
+            amount = float(raw_amount)
+        category_data.append({"name": class_suffix_to_category[name], "amount": amount})
     total_categories = len(category_data)
 
     return jsonify({
