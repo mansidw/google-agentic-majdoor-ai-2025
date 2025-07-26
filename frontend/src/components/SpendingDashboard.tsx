@@ -5,7 +5,7 @@ import { BarChart3, PieChart, DollarSign, TrendingUp } from "lucide-react";
 
 export const SpendingDashboard = () => {
   const categoryData = [
-    { name: "Groceries", amount: 342, percentage: 45, color: "bg-accent" },
+    { name: "Groceries", amount: 342, percentage: 45, color: "bg-primary" },
     { name: "Restaurants", amount: 185, percentage: 25, color: "bg-primary" },
     { name: "Transport", amount: 89, percentage: 12, color: "bg-info" },
     { name: "Shopping", amount: 76, percentage: 10, color: "bg-warning" },
@@ -53,12 +53,12 @@ export const SpendingDashboard = () => {
 
         <Card className="p-4 bg-card border-0 shadow-card">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-accent/10 rounded-full">
-              <TrendingUp className="h-4 w-4 text-accent" />
+            <div className="p-2 bg-primary/10 rounded-full">
+              <TrendingUp className="h-4 w-4 text-primary" />
             </div>
             <div>
               <p className="text-xs text-muted-foreground">vs Last Month</p>
-              <p className="text-lg font-semibold text-accent">+8.7%</p>
+              <p className="text-lg font-semibold text-primary">+8.7%</p>
             </div>
           </div>
         </Card>
@@ -130,7 +130,7 @@ export const SpendingDashboard = () => {
                     className="bg-gradient-primary h-8 rounded-full flex items-center justify-end pr-3"
                     style={{ width: `${(month.amount / 800) * 100}%` }}
                   >
-                    <span className="text-xs font-medium text-primary-foreground">
+                    <span className="text-xs font-medium text-foreground font-semibold">
                       ${month.amount}
                     </span>
                   </div>

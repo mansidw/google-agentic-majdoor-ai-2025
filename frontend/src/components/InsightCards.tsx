@@ -1,6 +1,6 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { TrendingUp, ShoppingCart, Calendar, AlertCircle, Wallet } from "lucide-react";
+import { TrendingUp, ShoppingCart, Calendar, AlertCircle, Wallet, BarChart3 } from "lucide-react";
 
 export const InsightCards = () => {
   const insights = [
@@ -18,8 +18,8 @@ export const InsightCards = () => {
       title: "Top Category: Groceries",
       description: "72% of your spending this month went to grocery stores",
       category: "Category",
-      color: "text-accent",
-      bgColor: "bg-accent/10", 
+      color: "text-primary",
+      bgColor: "bg-primary/10",
       action: "Create Grocery Pass"
     },
     {
@@ -39,6 +39,15 @@ export const InsightCards = () => {
       color: "text-destructive",
       bgColor: "bg-destructive/10",
       action: "Track Subscriptions"
+    },
+    {
+      title: "Smart Categorization",
+      description: "Automatically categorize your expenses with AI.",
+      icon: BarChart3,
+      color: "text-primary",
+      bgColor: "bg-primary/10",
+      category: "AI",
+      action: "Learn More"
     }
   ];
 
@@ -78,7 +87,7 @@ export const InsightCards = () => {
                     <Button size="sm" variant="outline" className="text-xs">
                       {insight.action}
                     </Button>
-                    <Button size="sm" className="text-xs bg-gradient-primary border-0">
+                    <Button size="sm" className="text-xs bg-primary text-white border-primary hover:bg-white hover:text-primary hover:border-primary">
                       <Wallet className="h-3 w-3 mr-1" />
                       Add to Wallet
                     </Button>

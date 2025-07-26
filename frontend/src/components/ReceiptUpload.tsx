@@ -155,7 +155,7 @@ export const ReceiptUpload = () => {
           </div>
 
           <div className="flex gap-2">
-            <Button className="flex-1" size="sm">
+            <Button className="flex-1 bg-primary text-white border-primary hover:bg-white hover:text-primary hover:border-primary" size="sm">
               Add to Wallet
             </Button>
             <Button
@@ -203,7 +203,7 @@ export const ReceiptUpload = () => {
           <div className="space-y-3">
             <Button
               onClick={() => handleUpload("camera")}
-              className="w-full bg-gradient-primary border-0"
+              className="w-full bg-primary text-white border-primary hover:bg-white hover:text-primary hover:border-primary"
               size="lg"
             >
               <Camera className="h-5 w-5 mr-2" />
