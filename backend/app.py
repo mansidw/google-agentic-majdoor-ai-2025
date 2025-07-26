@@ -33,7 +33,7 @@ CORS(app, supports_credentials=True)
 
 # Initialize Gemini API key
 os.environ["GOOGLE_API_KEY"] = str(os.getenv("GOOGLE_API_KEY"))
-FI_MCP_DEV_URL = "http://localhost:8080/mcp/stream"
+FI_MCP_DEV_URL = "https://d7da877c3cec.ngrok-free.app/mcp/stream"
 
 
 
