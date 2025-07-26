@@ -14,6 +14,7 @@ from google.genai import types
 import json
 from google.cloud import firestore
 from google.cloud.firestore_v1.base_query import FieldFilter
+from utils.offers_utils import get_session_id
 from utils.prompts import ROUTING_AGENT_PROMPT
 from utils.demo_generic import DemoGeneric
 from utils.helper_tools import (
@@ -27,7 +28,7 @@ from utils.helper_tools import (
     get_credit_card_offers,
 )
 from google.oauth2 import service_account
-from utils.recommendations import get_card_recommendations, get_session_id
+from utils.recommendations import get_card_recommendations
 
 from googleapiclient.discovery import build
 import datetime
