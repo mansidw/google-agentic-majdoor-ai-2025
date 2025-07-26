@@ -7,6 +7,9 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import ChatbotSiri from './components/ChatbotSiri';
 import VoiceAssistant from "./pages/Voice";
+import PWAInstallPrompt from "./components/PWAInstallPrompt";
+import PWAUpdatePrompt from "./components/PWAUpdatePrompt";
+import OfflineIndicator from "./components/OfflineIndicator";
 
 const queryClient = new QueryClient();
 
@@ -24,6 +27,9 @@ const App = () => (
         </Routes>
       </BrowserRouter>
       <ChatbotSiri />
+      <PWAInstallPrompt />
+      <PWAUpdatePrompt />
+      <OfflineIndicator />
     </TooltipProvider>
   </QueryClientProvider>
 );
