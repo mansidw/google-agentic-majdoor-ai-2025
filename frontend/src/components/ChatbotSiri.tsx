@@ -117,7 +117,8 @@ const ChatbotSiri: React.FC = () => {
         const offersText = data.offers.map((offer: any, idx: number) =>
           `${idx + 1}. ${offer.vendor} (${offer.credit_card}): ${offer.offer}`
         ).join('\n');
-        setResponse(offersText);
+        const prior_text = "Based on your requirements, Here are some offers I found \n"
+        setResponse(prior_text + offersText);
         // Speak the offers
         speakOffers(data.offers);
       } else if (data.response) {
@@ -151,7 +152,7 @@ const ChatbotSiri: React.FC = () => {
     
     // Create language-specific responses
     const responses = {
-      en: `Here are some offers I found. ${offers.slice(0, 3).map((offer: any) =>
+      en: `Based on your requirements, Here are some offers I found. ${offers.slice(0, 3).map((offer: any) =>
         `${offer.vendor} with your ${offer.credit_card}: ${offer.offer.replace(/\u20b9/g, 'rupees ')}`
       ).join('. Next, ')}. Would you like to hear more?`,
       hi: `मैंने कुछ ऑफर पाए हैं। ${offers.slice(0, 3).map((offer: any) =>

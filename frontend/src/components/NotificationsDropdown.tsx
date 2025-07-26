@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Bell, X, Check, AlertCircle, Info, CheckCircle } from "lucide-react";
+import { Bell, X, Info, AlertCircle, CheckCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Notification {
@@ -79,7 +79,7 @@ const getNotificationIcon = (type: Notification['type']) => {
 const formatTimestamp = (date: Date) => {
   const now = new Date();
   const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
-  
+
   if (diffInMinutes < 60) {
     return `${diffInMinutes}m ago`;
   } else if (diffInMinutes < 1440) {
@@ -92,6 +92,7 @@ const formatTimestamp = (date: Date) => {
 export const NotificationsDropdown = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>(mockNotifications);
+  const [loadingRec, setLoadingRec] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
@@ -131,6 +132,37 @@ export const NotificationsDropdown = () => {
     setNotifications(prev => prev.filter(notification => notification.id !== id));
   };
 
+  const fetchRecommendation = async () => {
+    setLoadingRec(true);
+    const sessionId = 'mcp-session-84427bd6-fc37-48b1-96e9-14116c131fd5';
+    try {
+      const res = await fetch('http://127.0.0.1:5000/recommend_card', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: sessionId })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        const newNotif: Notification = {
+          id: Date.now().toString(),
+          title: 'Card Recommendation',
+          message: `Based on your recent ${data.category} spending, we recommend: ${data.recommended_cards.join(', ')}.`,
+          type: 'info',
+          timestamp: new Date(),
+          read: false,
+          actionRequired: false,
+        };
+        setNotifications(prev => [newNotif, ...prev]);
+      } else {
+        console.error(data.error || 'Failed to get recommendation');
+      }
+    } catch (err) {
+      console.error('Error fetching recommendation', err);
+    } finally {
+      setLoadingRec(false);
+    }
+  };
+
   return (
     <div className="relative">
       <Button
@@ -153,122 +185,70 @@ export const NotificationsDropdown = () => {
 
       {isOpen && (
         <>
-          {/* Mobile backdrop for better UX */}
           <div className="fixed inset-0 z-40 md:hidden" onClick={() => setIsOpen(false)} />
           <div
             ref={dropdownRef}
-            className="absolute top-full mt-2 bg-card border border-border rounded-lg shadow-xl z-50 max-h-96 overflow-hidden 
-                       md:right-0 md:w-80
-                       -right-2 w-72 
-                       transform transition-all duration-200 ease-out
-                       opacity-100 scale-100"
+            className="absolute top-full mt-2 bg-card border border-border rounded-lg shadow-xl z-50 max-h-96 overflow-hidden md:right-0 md:w-80 -right-2 w-80 transform transition-all duration-200 ease-out opacity-100 scale-100"
           >
-          {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-border">
-            <h3 className="font-semibold text-foreground">Notifications</h3>
-            <div className="flex items-center gap-2">
-              {unreadCount > 0 && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={markAllAsRead}
-                  className="text-xs text-muted-foreground hover:text-foreground"
-                >
-                  Mark all read
+            <div className="flex items-center justify-between p-4 border-b border-border">
+              <h3 className="font-semibold text-foreground">Notifications</h3>
+              <div className="flex items-center gap-2">
+                {unreadCount > 0 && (
+                  <Button variant="ghost" size="sm" onClick={markAllAsRead} className="text-xs text-muted-foreground hover:text-foreground">
+                    Mark all read
+                  </Button>
+                )}
+                <Button variant="outline" size="sm" disabled={loadingRec} onClick={fetchRecommendation} className="text-xs">
+                  {loadingRec ? 'Loading...' : 'Recommend'}
                 </Button>
-              )}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6"
-                onClick={() => setIsOpen(false)}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-
-          {/* Notifications List */}
-          <div className="max-h-80 overflow-y-auto">
-            {notifications.length === 0 ? (
-              <div className="p-6 text-center text-muted-foreground">
-                <Bell className="h-12 w-12 mx-auto mb-3 opacity-30" />
-                <p>No notifications yet</p>
+                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setIsOpen(false)}>
+                  <X className="h-4 w-4" />
+                </Button>
               </div>
-            ) : (
-              <div className="divide-y divide-border">
-                {notifications.map((notification) => (
-                  <div
-                    key={notification.id}
-                    className={cn(
-                      "group p-4 hover:bg-muted/50 transition-colors cursor-pointer",
-                      !notification.read && "bg-muted/30"
-                    )}
-                    onClick={() => !notification.read && markAsRead(notification.id)}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="flex-shrink-0 mt-0.5">
-                        {getNotificationIcon(notification.type)}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-2">
-                          <h4 className={cn(
-                            "text-sm font-medium truncate",
-                            !notification.read && "text-foreground",
-                            notification.read && "text-muted-foreground"
-                          )}>
-                            {notification.title}
-                          </h4>
-                          <div className="flex items-center gap-1">
-                            {!notification.read && (
-                              <div className="h-2 w-2 bg-primary rounded-full flex-shrink-0" />
-                            )}
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6 opacity-0 group-hover:opacity-100"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                removeNotification(notification.id);
-                              }}
-                            >
-                              <X className="h-3 w-3" />
-                            </Button>
+            </div>
+            <div className="max-h-80 overflow-y-auto">
+              {notifications.length === 0 ? (
+                <div className="p-6 text-center text-muted-foreground">
+                  <Bell className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                  <p>No notifications yet</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-border">
+                  {notifications.map(notification => (
+                    <div
+                      key={notification.id}
+                      className={cn("group p-4 hover:bg-muted/50 transition-colors cursor-pointer", !notification.read && "bg-muted/30")}
+                      onClick={() => !notification.read && markAsRead(notification.id)}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="flex-shrink-0 mt-0.5">{getNotificationIcon(notification.type)}</div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-2">
+                            <h4 className={cn("text-sm font-medium truncate", !notification.read ? "text-foreground" : "text-muted-foreground")}> {notification.title} </h4>
+                            <div className="flex items-center gap-1">
+                              {!notification.read && <div className="h-2 w-2 bg-primary rounded-full flex-shrink-0" />}
+                              <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100" onClick={e => { e.stopPropagation(); removeNotification(notification.id); }}>
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </div>
                           </div>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                          {notification.message}
-                        </p>
-                        <div className="flex items-center justify-between mt-2">
-                          <span className="text-xs text-muted-foreground">
-                            {formatTimestamp(notification.timestamp)}
-                          </span>
-                          {notification.actionRequired && (
-                            <Badge variant="outline" className="text-xs">
-                              Action Required
-                            </Badge>
-                          )}
+                          <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{notification.message}</p>
+                          <div className="flex items-center justify-between mt-2">
+                            <span className="text-xs text-muted-foreground">{formatTimestamp(notification.timestamp)}</span>
+                            {notification.actionRequired && <Badge variant="outline" className="text-xs">Action Required</Badge>}
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
+              )}
+            </div>
+            {notifications.length > 0 && (
+              <div className="p-3 border-t border-border">
+                <Button variant="ghost" size="sm" className="w-full text-xs text-muted-foreground hover:text-foreground">View All Notifications</Button>
               </div>
             )}
-          </div>
-
-          {/* Footer */}
-          {notifications.length > 0 && (
-            <div className="p-3 border-t border-border">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="w-full text-xs text-muted-foreground hover:text-foreground"
-              >
-                View All Notifications
-              </Button>
-            </div>
-          )}
           </div>
         </>
       )}
