@@ -5,6 +5,9 @@ import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Camera, Upload, FileText, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { transformReceiptToWalletObject } from "@/utils/transformToWalletObject";
+import axios from "axios";
+import { generate_object_suffix } from "@/utils/object_suffix";
 
 export interface IMockReceiptData {
   currency: string;
@@ -18,12 +21,15 @@ export interface IMockReceiptData {
   }>;
 }
 export const ReceiptUpload = () => {
+  const [addingToWallet, setAddingToWallet] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [analyzed, setAnalyzed] = useState(false);
   const [showPhotoCapture, setShowPhotoCapture] = useState(false);
   const [mockReceiptData, setMockReceiptData] = useState<IMockReceiptData>();
   const { toast } = useToast();
+
+  const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
   const handlePhotoCancel = () => {
     setShowPhotoCapture(false);
@@ -105,6 +111,46 @@ export const ReceiptUpload = () => {
     // Optionally, handle data from API
   };
 
+  const handleAddToWallet = async () => {
+    setAddingToWallet(true);
+    try {
+      const API_ENDPOINT = backendUrl + "/api/create-wallet-object";
+      const payload = {
+        class_suffix: "GroceryClass",
+        object_suffix: generate_object_suffix(),
+        object_data: transformReceiptToWalletObject(mockReceiptData),
+      };
+
+      const res = await axios.post(API_ENDPOINT, payload);
+
+      if (res.status !== 200) {
+        throw new Error("Failed to add to wallet");
+      }
+
+      if (res.data) {
+        const WALLET_ENDPOINT = backendUrl + "/api/get-wallet-link";
+        const wallet_link = await axios.post(WALLET_ENDPOINT, res.data);
+        if (wallet_link.status != 200 || !wallet_link.data) {
+          throw new Error("Failed to get wallet link");
+        }
+        window.open(wallet_link.data.saveUrl, "_blank");
+        toast({
+          title: "Added to Wallet",
+          description: "Your receipt has been added to Google Wallet",
+        });
+      }
+      // Optionally, handle response data
+    } catch (err) {
+      toast({
+        title: "Add to Wallet Failed",
+        description: "Could not add receipt to wallet.",
+        variant: "destructive",
+      });
+    } finally {
+      setAddingToWallet(false);
+    }
+  };
+
   if (analyzed && mockReceiptData) {
     return (
       <Card className="p-6 max-w-md mx-auto animate-slide-up bg-card border-0 shadow-card">
@@ -155,13 +201,19 @@ export const ReceiptUpload = () => {
           </div>
 
           <div className="flex gap-2">
-            <Button className="flex-1 bg-primary text-white border-primary hover:bg-white hover:text-primary hover:border-primary" size="sm">
-              Add to Wallet
+            <Button
+              className="flex-1 bg-primary text-white border-primary hover:bg-white hover:text-primary hover:border-primary"
+              size="sm"
+              onClick={handleAddToWallet}
+              disabled={addingToWallet}
+            >
+              {addingToWallet ? "Adding..." : "Add to Wallet"}
             </Button>
             <Button
               variant="outline"
               size="sm"
               onClick={() => setAnalyzed(false)}
+              disabled={addingToWallet}
             >
               Upload Another
             </Button>
