@@ -114,10 +114,11 @@ const ChatbotSiri: React.FC = () => {
       {/* Floating Button */}
       <button
         onClick={() => { setOpen(true); setTimeout(startListening, 400); }}
+        className="chatbot-button"
         style={{
           position: 'fixed',
           right: 24,
-          bottom: 24,
+          bottom: 104, // 24px base + 80px bottom nav height
           zIndex: 1000,
           width: 64,
           height: 64,
@@ -202,6 +203,31 @@ const ChatbotSiri: React.FC = () => {
         @keyframes pulse {
           0% { transform: scale(1); box-shadow: 0 0 32px 8px #a259ff55; }
           100% { transform: scale(1.15); box-shadow: 0 0 48px 16px #4f8cff88; }
+        }
+        
+        /* Responsive positioning for ChatBot button */
+        @media (max-width: 768px) {
+          .chatbot-button {
+            bottom: 104px !important; /* Above mobile bottom nav (80px + 24px margin) */
+            right: 16px !important; /* Slightly closer to edge on mobile */
+          }
+        }
+        
+        @media (min-width: 769px) {
+          .chatbot-button {
+            bottom: 32px !important; /* Standard desktop positioning */
+            right: 24px !important;
+          }
+        }
+        
+        /* Safe area support for devices with notches */
+        @supports(padding: max(0px)) {
+          @media (max-width: 768px) {
+            .chatbot-button {
+              bottom: max(104px, calc(80px + 24px + env(safe-area-inset-bottom))) !important;
+              right: max(16px, env(safe-area-inset-right)) !important;
+            }
+          }
         }
       `}</style>
     </>
