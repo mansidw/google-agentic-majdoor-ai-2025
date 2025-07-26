@@ -25,7 +25,7 @@ from utils.recommendations import get_card_recommendations
 
 from googleapiclient.discovery import build
 from google.oauth2 import service_account
-import datetime
+from datetime import datetime, timedelta
 import os
 from typing import List, Dict, Any, Tuple
 from google.adk.agents import Agent
@@ -36,12 +36,12 @@ from googleapiclient.errors import HttpError
 load_dotenv()
 SERVICE_ACCOUNT_FILE_PATH="gwallet_sa_keyfile.json"
 app = Flask(__name__)
-CORS(app, supports_credentials=True)
+CORS(app)
 
 # Initialize Gemini API key
 os.environ["GOOGLE_API_KEY"] = str(os.getenv("GOOGLE_API_KEY"))
-FI_MCP_DEV_URL = "https://d7da877c3cec.ngrok-free.app/mcp/stream"
-
+# FI_MCP_DEV_URL = "https://d7da877c3cec.ngrok-free.app/mcp/stream"
+FI_MCP_DEV_URL= os.getenv("FI_MCP_DEV_URL")
 CLASS_SUFFIXES=["GroceryClass"]
 issuer_id = os.getenv("ISSUER_ID")
 # Initialize the ADK Agent with our defined tools
@@ -202,7 +202,7 @@ def create_wallet_object():
     An API endpoint that generates and creates a wallet object of a give class.
     """
     wallet_service = DemoGeneric()
-    issuer_id = os.getenv("issuer_id")
+    issuer_id = os.getenv("ISSUER_ID")
 
     # Get class_suffix from request body
     data = request.get_json()
@@ -247,7 +247,7 @@ def get_wallet_link():
     # --- Configuration ---
     # In a real app, you would get these values based on the logged-in user
     # or from the request body.
-    issuer_id = os.getenv("issuer_id")
+    issuer_id = os.getenv("ISSUER_ID")
 
     if not issuer_id:
         return jsonify({"error": "WALLET_issuer_id environment variable not set."}), 500
@@ -445,7 +445,7 @@ def process_passes_for_period(passes: List[Dict[str, Any]], period: str) -> Tupl
 
     filtered_passes = []
     total_expenditure = 0.0
-    today = datetime.datetime.now().date()
+    today = datetime.now().date()
 
     for p in passes:
         # Using .get() with a default empty dict to prevent KeyErrors
@@ -459,7 +459,7 @@ def process_passes_for_period(passes: List[Dict[str, Any]], period: str) -> Tupl
 
         try:
             # Assuming date is in 'YYYY-MM-DD' and total is like '$ 123.45'
-            pass_date = datetime.datetime.strptime(date_module.get('body'), '%Y-%m-%d').date()
+            pass_date = datetime.strptime(date_module.get('body'), '%Y-%m-%d').date()
             amount_str = total_module.get('body', '').split()[-1]
             amount = float(amount_str)
         except (ValueError, TypeError, IndexError):
@@ -592,7 +592,7 @@ def compare_monthly_expenditure():
     if not all_passes:
         return jsonify({"error": "Could not fetch any passes. Check logs for details."}), 500
 
-    today = datetime.datetime.now().date()
+    today = datetime.now().date()
     this_month = today.month
     this_year = today.year
     # Calculate previous month and year
@@ -615,7 +615,7 @@ def compare_monthly_expenditure():
             if not date_module or not total_module:
                 continue
             try:
-                pass_date = datetime.datetime.strptime(date_module.get('body'), '%Y-%m-%d').date()
+                pass_date = datetime.strptime(date_module.get('body'), '%Y-%m-%d').date()
                 amount_str = total_module.get('body', '').split()[-1]
                 amount = float(amount_str)
             except (ValueError, TypeError, IndexError):
@@ -655,7 +655,6 @@ def compare_monthly_expenditure():
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from datetime import datetime, timedelta
 import secrets
 
 # In-memory storage for verification codes (in production, use Redis or database)
