@@ -102,20 +102,46 @@ def analyze_receipt():
 
     # Prompt for the LLM
     prompt_text = """
-    You are an expert receipt processing agent. Analyze the provided receipt image.
-    Extract the merchant name, transaction date, total amount, tax, currency, and a list of all individual items with their prices.
+    You are an expert receipt processing agent. Analyze the provided receipt image or screenshot.
+    If the image is a standard receipt, extract:
+      - merchant name
+      - transaction date
+      - total amount
+      - tax
+      - currency
+      - a list of all individual items with their prices
+
+    If the image is a Google Pay (GPay) transaction screenshot, extract:
+      - merchant name
+      - amount
+      - the 'added note' as the description(if present)
+      - transaction date
+      - currency
 
     If you cannot find a value for a field, set it to null.
 
     Respond ONLY with a valid JSON object. Do not include any other text, explanations, or markdown formatting like ```json.
 
-    The JSON structure must be:
+    For a standard receipt, the JSON structure must be:
     {
       "merchant": "string",
       "date": "YYYY-MM-DD",
       "total": number,
       "tax": number,
       "currency": "ISO 4217 code (e.g., USD, EUR, INR)",
+      "items": [
+        { "description": "string", "price": number }
+      ]
+    }
+
+    For a GPay screenshot, the JSON structure must be:
+    {
+      "merchant": "string",
+      "total": number,
+      "note": "string",
+      "tax": number,
+      "date": "YYYY-MM-DD",
+      "currency": "ISO 4217 code (e.g., INR, USD)",
       "items": [
         { "description": "string", "price": number }
       ]
@@ -202,7 +228,7 @@ def create_wallet_object():
     An API endpoint that generates and creates a wallet object of a give class.
     """
     wallet_service = DemoGeneric()
-    issuer_id = os.getenv("issuer_id")
+    issuer_id = os.getenv("ISSUER_ID")
 
     # Get class_suffix from request body
     data = request.get_json()
@@ -247,7 +273,7 @@ def get_wallet_link():
     # --- Configuration ---
     # In a real app, you would get these values based on the logged-in user
     # or from the request body.
-    issuer_id = os.getenv("issuer_id")
+    issuer_id = os.getenv("ISSUER_ID")
 
     if not issuer_id:
         return jsonify({"error": "WALLET_issuer_id environment variable not set."}), 500
@@ -716,7 +742,31 @@ def get_data_insights():
     if 'error' in insights:
         return jsonify(insights), 500
     return jsonify(insights)
-    
+
+def send_wallet_notification(issuer_id, object_suffix, message):
+    try:
+        SERVICE_ACCOUNT_FILE_PATH = "gwallet_sa_keyfile.json"
+        creds = service_account.Credentials.from_service_account_file(
+            SERVICE_ACCOUNT_FILE_PATH,
+            scopes=['https://www.googleapis.com/auth/wallet_object.issuer']
+        )
+        service = build('walletobjects', 'v1', credentials=creds)
+        notification_body = {
+            "objectId": f"{issuer_id}.{object_suffix}",
+            "notification": {
+                "title": "New Insights Available",
+                "body": message
+            }
+        }
+        # Send notification
+        service.genericobject().addmessage(
+            resourceId=f"{issuer_id}.{object_suffix}",
+            body=notification_body
+        ).execute()
+        print(f"[WALLET NOTIFICATION] Sent for {issuer_id}.{object_suffix}")
+    except Exception as e:
+        print(f"[WALLET NOTIFICATION ERROR] {str(e)}")
+
 from apscheduler.schedulers.background import BackgroundScheduler
 def run_insight_cron():
     # Prepare your data for insights (fetch from DB or API as needed)
@@ -757,10 +807,34 @@ def run_insight_cron():
         ]
     }
     wallet_service.create_object(issuer_id, class_suffix, object_suffix, object_data)
+    print("Received request for wallet link...")
+    data = request.get_json()
+    class_suffix = data["class_suffix"]
+    object_suffix = data["object_suffix"]
+    wallet_service = DemoGeneric()
+
+    # --- Configuration ---
+    # In a real app, you would get these values based on the logged-in user
+    # or from the request body.
+    issuer_id = os.getenv("ISSUER_ID")
+
+    if not issuer_id:
+        return jsonify({"error": "WALLET_issuer_id environment variable not set."}), 500
+
+    # Call the new method to generate the save link
+    save_link = wallet_service.create_jwt_existing_objects(
+        issuer_id, object_suffix, class_suffix
+    )
+
+    if save_link:
+        print(f"🔗 Generated save link: {save_link}")
+    else:
+        return jsonify({"error": "Failed to generate wallet link."}), 500
+    send_wallet_notification(issuer_id, object_suffix, "Your new insights are available in Google Wallet!")
 
 # Scheduler setup
 scheduler = BackgroundScheduler()
-scheduler.add_job(run_insight_cron, 'interval', minutes=2)
+scheduler.add_job(run_insight_cron, 'interval', hours=2)
 scheduler.start()
 
 
