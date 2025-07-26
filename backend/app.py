@@ -677,8 +677,6 @@ def compare_monthly_expenditure():
     }
     return jsonify(result)
 
-# --- POST API to call Gemini for data insights ---
-@app.route('/api/data-insights', methods=['POST'])
 
 # --- Helper function for insights generation ---
 def generate_insights_data():
