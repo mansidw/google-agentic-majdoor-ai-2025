@@ -1,0 +1,29 @@
+{
+  "merchant": "COTCO WHOLESALE",
+  "date": "2021-08-19",
+  "total": 679.56,
+  "tax": 102.67,
+  "currency": "USD",
+  "items": [
+    {
+      "description": "BANANAS",
+      "price": 1.67
+    },
+    {
+      "description": "Bluetooth Care",
+      "price": 122.34
+    },
+    {
+      "description": "Dinning Table",
+      "price": 422.99
+    },
+    {
+      "description": "Wine Bottle",
+      "price": 9.99
+    },
+    {
+      "description": "Beer Case",
+      "price": 19.9
+    }
+  ]
+}
