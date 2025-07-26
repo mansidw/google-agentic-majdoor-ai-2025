@@ -220,7 +220,11 @@ class DemoGeneric:
 
     # [START createObject]
     def create_object(
-        self, issuer_id: str, class_suffix: str, object_suffix: str
+        self,
+        issuer_id: str,
+        class_suffix: str,
+        object_suffix: str,
+        object_data: dict,
     ) -> str:
         """Create an object.
 
@@ -228,6 +232,7 @@ class DemoGeneric:
             issuer_id (str): The issuer ID being used for this request.
             class_suffix (str): Developer-defined unique ID for the pass class.
             object_suffix (str): Developer-defined unique ID for the pass object.
+            object_data (dict): Dynamic data for the object. Must contain all required fields.
 
         Returns:
             The pass object ID: f"{issuer_id}.{object_suffix}"
@@ -249,78 +254,13 @@ class DemoGeneric:
 
         # See link below for more information on required properties
         # https://developers.google.com/wallet/generic/rest/v1/genericobject
-        new_object = {
-            "id": f"{issuer_id}.{object_suffix}",
-            "classId": f"{issuer_id}.{class_suffix}",
-            "state": "ACTIVE",
-            "heroImage": {
-                "sourceUri": {
-                    "uri": "https://farm4.staticflickr.com/3723/11177041115_6e6a3b6f49_o.jpg"
-                },
-                "contentDescription": {
-                    "defaultValue": {
-                        "language": "en-US",
-                        "value": "Hero image description",
-                    }
-                },
-            },
-            "textModulesData": [
-                {
-                    "header": "Text module header",
-                    "body": "Text module body",
-                    "id": "TEXT_MODULE_ID",
-                }
-            ],
-            "linksModuleData": {
-                "uris": [
-                    {
-                        "uri": "http://maps.google.com/",
-                        "description": "Link module URI description",
-                        "id": "LINK_MODULE_URI_ID",
-                    },
-                    {
-                        "uri": "tel:6505555555",
-                        "description": "Link module tel description",
-                        "id": "LINK_MODULE_TEL_ID",
-                    },
-                ]
-            },
-            "imageModulesData": [
-                {
-                    "mainImage": {
-                        "sourceUri": {
-                            "uri": "http://farm4.staticflickr.com/3738/12440799783_3dc3c20606_b.jpg"
-                        },
-                        "contentDescription": {
-                            "defaultValue": {
-                                "language": "en-US",
-                                "value": "Image module description",
-                            }
-                        },
-                    },
-                    "id": "IMAGE_MODULE_ID",
-                }
-            ],
-            "barcode": {"type": "QR_CODE", "value": "QR code"},
-            "cardTitle": {
-                "defaultValue": {"language": "en-US", "value": "Generic card title"}
-            },
-            "header": {
-                "defaultValue": {"language": "en-US", "value": "Generic header"}
-            },
-            "hexBackgroundColor": "#4285f4",
-            "logo": {
-                "sourceUri": {
-                    "uri": "https://storage.googleapis.com/wallet-lab-tools-codelab-artifacts-public/pass_google_logo.jpg"
-                },
-                "contentDescription": {
-                    "defaultValue": {"language": "en-US", "value": "Generic card logo"}
-                },
-            },
-        }
 
-        # Create the object
-        response = self.client.genericobject().insert(body=new_object).execute()
+        # Set critical fields that must be derived from parameters
+        object_data["id"] = f"{issuer_id}.{object_suffix}"
+        object_data["classId"] = f"{issuer_id}.{class_suffix}"
+
+        # Create the object using the provided data
+        response = self.client.genericobject().insert(body=object_data).execute()
 
         print("Object insert response")
         print(response)

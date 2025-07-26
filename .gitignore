@@ -24,7 +24,6 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
 lib64/
 parts/
 sdist/
@@ -181,5 +180,7 @@ bower_components
 psd
 thumb
 sketch
+
+gwallet_sa_keyfile.json
 
 # End of https://www.toptal.com/developers/gitignore/api/flask,react

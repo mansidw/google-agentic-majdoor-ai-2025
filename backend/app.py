@@ -110,6 +110,75 @@ def analyze_receipt():
         return jsonify({"error": f"LLM processing failed: {str(e)}"}), 500
 
 
+@app.route("/api/create-wallet-class", methods=["POST"])
+def create_wallet_class():
+    """
+    An API endpoint that generates and creates a wallet class.
+    """
+    wallet_service = DemoGeneric()
+
+    # --- Configuration ---
+    # In a real app, you would get these values based on the logged-in user
+    # or from the request body.
+    issuer_id = os.getenv("ISSUER_ID")
+
+    # Get class_suffix from request body
+    data = request.get_json()
+    if not data or "class_suffix" not in data:
+        return jsonify({"error": "Class Suffix is required in request body."}), 400
+
+    class_suffix = data["class_suffix"]
+
+    if not class_suffix:
+        return jsonify({"error": "Class Suffix is required."}), 500
+
+    # Call the new method to generate the save link
+    class_deets = wallet_service.create_class(issuer_id, class_suffix)
+
+    if class_deets:
+        print(f"🔗 Generated class name: {class_deets}")
+        return jsonify({"class_name": class_deets})
+    else:
+        return jsonify({"error": "Failed to generate new class."}), 500
+
+
+@app.route("/api/create-wallet-object", methods=["POST"])
+def create_wallet_object():
+    """
+    An API endpoint that generates and creates a wallet object of a give class.
+    """
+    wallet_service = DemoGeneric()
+    issuer_id = os.getenv("ISSUER_ID")
+
+    # Get class_suffix from request body
+    data = request.get_json()
+    if not data or "class_suffix" not in data:
+        return jsonify({"error": "Class Suffix is required in request body."}), 400
+
+    class_suffix = data["class_suffix"]
+    if not class_suffix:
+        return jsonify({"error": "Class Suffix is required."}), 500
+
+    object_suffix = data["object_suffix"]
+    if "object_suffix" not in data:
+        return jsonify({"error": "Object Suffix is required in request body."}), 400
+
+    object_data = data["object_data"]
+    if "object_data" not in data:
+        return jsonify({"error": "Object data is required in request body."}), 400
+
+    # Call the new method to generate the save link
+    object_deets = wallet_service.create_object(
+        issuer_id, class_suffix, object_suffix, object_data
+    )
+
+    if object_deets:
+        print(f"🔗 Generated object name: {object_deets}")
+        return jsonify({"object_name": object_deets})
+    else:
+        return jsonify({"error": "Failed to generate new object."}), 500
+
+
 @app.route("/api/get-wallet-link", methods=["POST"])
 def get_wallet_link():
     """
@@ -121,7 +190,7 @@ def get_wallet_link():
     # --- Configuration ---
     # In a real app, you would get these values based on the logged-in user
     # or from the request body.
-    issuer_id = "3388000000022957866"
+    issuer_id = os.getenv("ISSUER_ID")
     class_suffix = "sample_class_1"  # The class you already created
 
     # IMPORTANT: The object_suffix MUST be for an object that has already been
