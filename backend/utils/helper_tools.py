@@ -21,7 +21,7 @@ FI_MCP_DEV_URL = os.getenv("FI_MCP_DEV_URL")  # Update this to your fi-mcp-dev U
 # client = genai.Client()  # Removed, not needed for generativeai
 # In a real app, this data would come from Firestore or another database.
 MOCK_INVENTORY = {
-    "01": [
+    "100": [
         {
             "item": "Tomatoes (1kg)",
             "purchase_date": "2025-07-24",

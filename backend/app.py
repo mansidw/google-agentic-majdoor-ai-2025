@@ -417,7 +417,7 @@ def chat():
     """The main chat endpoint for the frontend to call."""
     data = request.json
     query = data.get("query")
-    user_id = data.get("userId")
+    user_id = data.get("userId", "100")
 
     if not query:
         return jsonify({"error": "Query is required."}), 400
