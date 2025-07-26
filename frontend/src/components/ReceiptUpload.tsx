@@ -3,7 +3,9 @@ import { PhotoCaptureUploader } from "@/components/PhotoCaptureUploader";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Camera, Upload, FileText, CheckCircle } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Camera, Upload, FileText, CheckCircle, Edit3 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { transformReceiptToWalletObject } from "@/utils/transformToWalletObject";
 import axios from "axios";
@@ -27,6 +29,7 @@ export const ReceiptUpload = () => {
   const [analyzed, setAnalyzed] = useState(false);
   const [showPhotoCapture, setShowPhotoCapture] = useState(false);
   const [mockReceiptData, setMockReceiptData] = useState<IMockReceiptData>();
+  const [isEditing, setIsEditing] = useState(false);
   const { toast } = useToast();
 
   const backendUrl = import.meta.env.VITE_BACKEND_URL;
@@ -72,9 +75,10 @@ export const ReceiptUpload = () => {
           setUploading(false);
           setAnalyzed(true);
           setMockReceiptData(res.data);
+          setIsEditing(true); // Start in editing mode
           toast({
             title: "Receipt Analyzed!",
-            description: "AI extraction completed successfully",
+            description: "AI extraction completed successfully. Please review and edit if needed.",
           });
           // Optionally handle response data
         }
@@ -103,12 +107,51 @@ export const ReceiptUpload = () => {
     setMockReceiptData(data);
     setShowPhotoCapture(false);
     setAnalyzed(true);
+    setIsEditing(true); // Start in editing mode
 
     toast({
       title: "Receipt Analyzed!",
-      description: "AI extraction completed successfully",
+      description: "AI extraction completed successfully. Please review and edit if needed.",
     });
     // Optionally, handle data from API
+  };
+
+  const handleFieldChange = (field: keyof IMockReceiptData, value: string | number) => {
+    if (!mockReceiptData) return;
+    setMockReceiptData({
+      ...mockReceiptData,
+      [field]: value,
+    });
+  };
+
+  const handleItemChange = (index: number, field: 'description' | 'price', value: string | number) => {
+    if (!mockReceiptData) return;
+    const updatedItems = [...mockReceiptData.items];
+    updatedItems[index] = {
+      ...updatedItems[index],
+      [field]: value,
+    };
+    setMockReceiptData({
+      ...mockReceiptData,
+      items: updatedItems,
+    });
+  };
+
+  const addNewItem = () => {
+    if (!mockReceiptData) return;
+    setMockReceiptData({
+      ...mockReceiptData,
+      items: [...mockReceiptData.items, { description: '', price: 0 }],
+    });
+  };
+
+  const removeItem = (index: number) => {
+    if (!mockReceiptData) return;
+    const updatedItems = mockReceiptData.items.filter((_, i) => i !== index);
+    setMockReceiptData({
+      ...mockReceiptData,
+      items: updatedItems,
+    });
   };
 
   const handleAddToWallet = async () => {
@@ -159,42 +202,127 @@ export const ReceiptUpload = () => {
           <h3 className="text-lg font-semibold text-card-foreground">
             Receipt Analyzed
           </h3>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsEditing(!isEditing)}
+            className="ml-auto"
+          >
+            <Edit3 className="h-4 w-4" />
+            {isEditing ? 'View' : 'Edit'}
+          </Button>
         </div>
 
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4 p-4 bg-muted rounded-lg">
             <div>
-              <p className="text-sm text-muted-foreground">Merchant</p>
-              <p className="font-medium">{mockReceiptData.merchant}</p>
+              <Label className="text-sm text-muted-foreground">Merchant</Label>
+              {isEditing ? (
+                <Input
+                  value={mockReceiptData.merchant}
+                  onChange={(e) => handleFieldChange('merchant', e.target.value)}
+                  className="mt-1"
+                />
+              ) : (
+                <p className="font-medium">{mockReceiptData.merchant}</p>
+              )}
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Date</p>
-              <p className="font-medium">{mockReceiptData.date}</p>
+              <Label className="text-sm text-muted-foreground">Date</Label>
+              {isEditing ? (
+                <Input
+                  value={mockReceiptData.date}
+                  onChange={(e) => handleFieldChange('date', e.target.value)}
+                  className="mt-1"
+                />
+              ) : (
+                <p className="font-medium">{mockReceiptData.date}</p>
+              )}
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Total</p>
-              <p className="font-medium text-primary">
-                {mockReceiptData.total}
-              </p>
+              <Label className="text-sm text-muted-foreground">Total</Label>
+              {isEditing ? (
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={mockReceiptData.total}
+                  onChange={(e) => handleFieldChange('total', parseFloat(e.target.value) || 0)}
+                  className="mt-1"
+                />
+              ) : (
+                <p className="font-medium text-primary">
+                  {mockReceiptData.total}
+                </p>
+              )}
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Tax</p>
-              <p className="font-medium">{mockReceiptData.tax}</p>
+              <Label className="text-sm text-muted-foreground">Tax</Label>
+              {isEditing ? (
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={mockReceiptData.tax}
+                  onChange={(e) => handleFieldChange('tax', parseFloat(e.target.value) || 0)}
+                  className="mt-1"
+                />
+              ) : (
+                <p className="font-medium">{mockReceiptData.tax}</p>
+              )}
             </div>
           </div>
 
           <div>
-            <h4 className="font-medium mb-2 text-card-foreground">Items</h4>
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="font-medium text-card-foreground">Items</h4>
+              {isEditing && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={addNewItem}
+                  className="text-xs"
+                >
+                  Add Item
+                </Button>
+              )}
+            </div>
             <div className="space-y-2">
               {mockReceiptData.items.map((item, index) => (
                 <div
                   key={index}
-                  className="flex justify-between items-center p-2 bg-muted/50 rounded"
+                  className="flex justify-between items-center p-2 bg-muted/50 rounded gap-2"
                 >
-                  <div>
-                    <p className="font-medium text-sm">{item.description}</p>
-                  </div>
-                  <p className="font-medium text-sm">{item.price}</p>
+                  {isEditing ? (
+                    <>
+                      <Input
+                        value={item.description}
+                        onChange={(e) => handleItemChange(index, 'description', e.target.value)}
+                        placeholder="Item description"
+                        className="flex-1"
+                      />
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={item.price}
+                        onChange={(e) => handleItemChange(index, 'price', parseFloat(e.target.value) || 0)}
+                        className="w-20"
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => removeItem(index)}
+                        className="px-2"
+                      >
+                        ×
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <div>
+                        <p className="font-medium text-sm">{item.description}</p>
+                      </div>
+                      <p className="font-medium text-sm">{item.price}</p>
+                    </>
+                  )}
                 </div>
               ))}
             </div>
@@ -205,7 +333,7 @@ export const ReceiptUpload = () => {
               className="flex-1 bg-primary text-white border-primary hover:bg-white hover:text-primary hover:border-primary"
               size="sm"
               onClick={handleAddToWallet}
-              disabled={addingToWallet}
+              disabled={addingToWallet || isEditing}
             >
               {addingToWallet ? "Adding..." : "Add to Wallet"}
             </Button>
@@ -218,6 +346,11 @@ export const ReceiptUpload = () => {
               Upload Another
             </Button>
           </div>
+          {isEditing && (
+            <p className="text-xs text-muted-foreground text-center">
+              Click "View" to finish editing before adding to wallet
+            </p>
+          )}
         </div>
       </Card>
     );
