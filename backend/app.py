@@ -21,6 +21,8 @@ from utils.helper_tools import (
     identify_perishable_items,
     create_recipe_from_ingredients,
 )
+from utils.recommendations import get_card_recommendations
+
 from googleapiclient.discovery import build
 from google.oauth2 import service_account
 import datetime
@@ -367,6 +369,17 @@ def get_offers():
         "user_request": user_request
     })
 
+
+@app.route("/recommend_card", methods=["POST"])
+def recommend_card():
+    req = request.get_json(force=True)
+    session_id = req.get("session_id") or get_session_id()
+    try:
+        category, cards = get_card_recommendations(session_id)
+        return jsonify({"category": category, "recommended_cards": [cards[0]], "session_id": session_id})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+        
 def fetch_wallet_passes(class_id: str) -> List[Dict[str, Any]]:
     """
     Fetches all generic pass objects for a given class ID from the Google Wallet API.
