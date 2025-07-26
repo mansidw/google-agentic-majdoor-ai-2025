@@ -7,7 +7,7 @@ import PIL.Image
 import io
 import tempfile
 import fitz  # PyMuPDF for PDF handling
-from google import genai
+import google.generativeai as genai
 import json
 import base64
 import random
@@ -19,8 +19,10 @@ app = Flask(__name__)
 CORS(app, supports_credentials=True)
 
 # Initialize Gemini client
-os.environ["GOOGLE_API_KEY"] = str(os.getenv("GOOGLE_API_KEY"))
-client = genai.Client()
+
+# Configure Gemini API
+genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+model = genai.GenerativeModel("gemini-2.0-flash")
 
 
 @app.route("/health")
@@ -88,8 +90,7 @@ def analyze_receipt():
         return jsonify({"error": f"Failed to process file: {str(e)}"}), 400
 
     try:
-        response = client.models.generate_content(
-            model="gemini-2.0-flash",
+        response = model.generate_content(
             contents=contents,
         )
         response_text = response.text
