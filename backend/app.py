@@ -11,7 +11,9 @@ from google import genai
 import json
 import base64
 import random
+import requests
 from utils.demo_generic import DemoGeneric
+from utils.offers_utils import get_gemini_offers, extract_credit_cards, get_session_id, extract_intent_from_request
 
 load_dotenv()
 
@@ -20,6 +22,8 @@ CORS(app, supports_credentials=True)
 
 # Initialize Gemini client
 os.environ["GOOGLE_API_KEY"] = str(os.getenv("GOOGLE_API_KEY"))
+FI_MCP_DEV_URL = "http://localhost:8080/mcp/stream"
+
 client = genai.Client()
 
 
@@ -208,6 +212,81 @@ def get_wallet_link():
     else:
         return jsonify({"error": "Failed to generate wallet link."}), 500
 
+
+@app.route("/offers", methods=["POST"])
+def get_offers():
+    """
+    Main endpoint that handles natural language requests and returns relevant offers.
+    """
+    # Get request data
+    req_json = request.get_json(silent=True) or {}
+    user_request = req_json.get("request", "")
+    session_id = req_json.get("session_id") or get_session_id()
+    
+    if not user_request:
+        return jsonify({"error": "No request provided"}), 400
+    
+    # Extract intent from user request
+    intent = extract_intent_from_request(user_request)
+    print(f"Extracted intent: {intent}")
+    
+    # Get credit card info from fi-mcp-dev
+    headers = {
+        "Content-Type": "application/json",
+        "Mcp-Session-Id": session_id
+    }
+    payload = {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "tools/call",
+        "params": {
+            "name": "fetch_credit_report",
+            "arguments": {}
+        }
+    }
+    
+    # Call fi-mcp-dev
+    resp = requests.post(FI_MCP_DEV_URL, headers=headers, json=payload)
+    if resp.status_code != 200:
+        return jsonify({"error": "Failed to contact fi-mcp-dev"}), 500
+    
+    data = resp.json()
+    print(data)
+    
+    # Check for login_url in response
+    login_url = None
+    if isinstance(data, dict) and "result" in data and "content" in data["result"]:
+        for item in data["result"]["content"]:
+            if item.get("type") == "text":
+                import json as pyjson
+                try:
+                    text_data = pyjson.loads(item["text"])
+                    if "login_url" in text_data:
+                        login_url = text_data["login_url"]
+                        break
+                except Exception:
+                    pass
+    
+    if login_url:
+        return jsonify({
+            "error": "User needs to login to fi-mcp-dev first.", 
+            "login_url": login_url, 
+            "session_id": session_id
+        }), 401
+    
+    # Extract credit card info
+    credit_cards = extract_credit_cards(data)
+    print(credit_cards)
+    
+    # Get offers using Gemini
+    offers = get_gemini_offers(credit_cards, intent)
+    
+    return jsonify({
+        "offers": offers, 
+        "session_id": session_id,
+        "intent": intent,
+        "user_request": user_request
+    })
 
 if __name__ == "__main__":
     app.run(debug=True)
