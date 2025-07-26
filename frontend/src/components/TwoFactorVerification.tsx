@@ -12,13 +12,15 @@ export const TwoFactorVerification = () => {
   const [code, setCode] = useState("");
   const [timeRemaining, setTimeRemaining] = useState(0);
   const [canResend, setCanResend] = useState(false);
+  const [hasInitialCodeSent, setHasInitialCodeSent] = useState(false);
 
   useEffect(() => {
-    // Automatically send verification code when component mounts
-    if (pendingUser?.email) {
+    // Automatically send verification code when component mounts (only once)
+    if (pendingUser?.email && !hasInitialCodeSent) {
       sendVerificationCode(pendingUser.email);
+      setHasInitialCodeSent(true);
     }
-  }, [pendingUser?.email, sendVerificationCode]);
+  }, [pendingUser?.email, hasInitialCodeSent]); // Removed sendVerificationCode from deps
 
   useEffect(() => {
     // Update timer every second
@@ -38,7 +40,11 @@ export const TwoFactorVerification = () => {
   const handleVerifyCode = async (e: React.FormEvent) => {
     e.preventDefault();
     if (code.length === 6) {
-      await verifyCode(code);
+      console.log('🔐 Submitting verification code...');
+      const success = await verifyCode(code);
+      if (success) {
+        console.log('✅ Verification successful - user should now be redirected');
+      }
     }
   };
 

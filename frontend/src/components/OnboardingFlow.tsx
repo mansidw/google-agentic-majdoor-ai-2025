@@ -91,7 +91,7 @@ export const OnboardingFlow = () => {
             size="lg" 
             onClick={handleGoogleSignIn}
             disabled={loading}
-            className="bg-card text-primary hover:bg-card/90 shadow-card mb-4 w-full max-w-sm animate-scale-in"
+            className="bg-card text-primary hover:bg-white hover:text-primary hover:border-white border-2 border-transparent shadow-card mb-4 w-full max-w-sm animate-scale-in transition-all duration-200"
             style={{ animationDelay: '0.4s' }}
           >
             {loading ? (

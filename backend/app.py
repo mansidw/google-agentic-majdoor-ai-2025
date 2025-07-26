@@ -622,5 +622,245 @@ def compare_monthly_expenditure():
     }
     return jsonify(result)
 
+# Two-Factor Authentication endpoints
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from datetime import datetime, timedelta
+import secrets
+
+# In-memory storage for verification codes (in production, use Redis or database)
+verification_codes = {}
+
+def generate_verification_code():
+    """Generate a 6-digit verification code"""
+    return str(random.randint(100000, 999999))
+
+def send_verification_email(email, code, user_name):
+    """Send verification email using SMTP"""
+    try:
+        # Email configuration - you'll need to set these environment variables
+        smtp_server = os.getenv('SMTP_SERVER', 'smtp.gmail.com')
+        smtp_port = int(os.getenv('SMTP_PORT', '587'))
+        sender_email = os.getenv('SENDER_EMAIL')
+        sender_password = os.getenv('SENDER_PASSWORD')
+        
+        if not sender_email or not sender_password:
+            print("SMTP credentials not configured, code will be logged to console")
+            print(f"Verification code for {email}: {code}")
+            return True
+        
+        # Create message
+        message = MIMEMultipart("alternative")
+        message["Subject"] = "Raseed - Your Verification Code"
+        message["From"] = sender_email
+        message["To"] = email
+        
+        # Create HTML content
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                .header {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-align: center; padding: 40px 20px; border-radius: 8px 8px 0 0; }}
+                .content {{ background: white; padding: 30px; border-radius: 0 0 8px 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }}
+                .code {{ background: #f8f9fa; border: 2px dashed #6c757d; padding: 20px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 8px; margin: 20px 0; border-radius: 8px; }}
+                .footer {{ margin-top: 30px; font-size: 12px; color: #666; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>🧾 Raseed</h1>
+                    <p>Smart Receipt Management</p>
+                </div>
+                <div class="content">
+                    <h2>Hello {user_name},</h2>
+                    <p>Welcome to Raseed! To complete your sign-in process, please use the verification code below:</p>
+                    <div class="code">{code}</div>
+                    <p>This code will expire in 10 minutes.</p>
+                    <p>If you didn't request this code, please ignore this email.</p>
+                    <div class="footer">
+                        <p>Best regards,<br>The Raseed Team</p>
+                        <p>This is an automated message. Please do not reply to this email.</p>
+                    </div>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        # Create text version
+        text_content = f"""
+        Hello {user_name},
+        
+        Your verification code for Raseed is: {code}
+        
+        This code will expire in 10 minutes.
+        
+        If you didn't request this code, please ignore this email.
+        
+        Best regards,
+        The Raseed Team
+        """
+        
+        html_part = MIMEText(html_content, "html")
+        text_part = MIMEText(text_content, "plain")
+        
+        message.attach(text_part)
+        message.attach(html_part)
+        
+        # Send email
+        server = smtplib.SMTP(smtp_server, smtp_port)
+        server.starttls()
+        server.login(sender_email, sender_password)
+        server.sendmail(sender_email, email, message.as_string())
+        server.quit()
+        
+        print(f"Verification email sent to {email}")
+        return True
+        
+    except Exception as e:
+        print(f"Failed to send email: {str(e)}")
+        print(f"Verification code for {email}: {code}")
+        return True  # Return True to allow fallback to console logging
+
+@app.route("/api/auth/send-verification", methods=["POST"])
+def send_verification():
+    """Send verification code to user's email"""
+    try:
+        data = request.get_json()
+        email = data.get('email')
+        user_name = data.get('userName', 'User')
+        
+        if not email:
+            return jsonify({"error": "Email is required"}), 400
+        
+        # Generate verification code
+        code = generate_verification_code()
+        
+        # Store verification code with expiration (10 minutes)
+        verification_codes[email] = {
+            'code': code,
+            'expires_at': datetime.now() + timedelta(minutes=10),
+            'verified': False
+        }
+        
+        # Send email
+        success = send_verification_email(email, code, user_name)
+        
+        if success:
+            return jsonify({
+                "message": "Verification code sent successfully",
+                "email": email,
+                "expires_in": "10 minutes"
+            }), 200
+        else:
+            return jsonify({"error": "Failed to send verification email"}), 500
+            
+    except Exception as e:
+        print(f"Error sending verification: {str(e)}")
+        return jsonify({"error": "Internal server error"}), 500
+
+@app.route("/api/auth/verify-code", methods=["POST"])
+def verify_code():
+    """Verify the entered code"""
+    try:
+        data = request.get_json()
+        email = data.get('email')
+        code = data.get('code')
+        
+        if not email or not code:
+            return jsonify({"error": "Email and code are required"}), 400
+        
+        # Check if verification data exists
+        if email not in verification_codes:
+            return jsonify({"error": "No verification code found for this email"}), 400
+        
+        verification_data = verification_codes[email]
+        
+        # Check if code has expired
+        if datetime.now() > verification_data['expires_at']:
+            del verification_codes[email]
+            return jsonify({"error": "Verification code has expired"}), 400
+        
+        # Check if code matches
+        if verification_data['code'] != code:
+            return jsonify({"error": "Invalid verification code"}), 400
+        
+        # Mark as verified
+        verification_data['verified'] = True
+        
+        return jsonify({
+            "message": "Verification successful",
+            "verified": True
+        }), 200
+        
+    except Exception as e:
+        print(f"Error verifying code: {str(e)}")
+        return jsonify({"error": "Internal server error"}), 500
+
+@app.route("/api/auth/resend-verification", methods=["POST"])
+def resend_verification():
+    """Resend verification code"""
+    try:
+        data = request.get_json()
+        email = data.get('email')
+        user_name = data.get('userName', 'User')
+        
+        if not email:
+            return jsonify({"error": "Email is required"}), 400
+        
+        # Generate new verification code
+        code = generate_verification_code()
+        
+        # Update verification code with new expiration
+        verification_codes[email] = {
+            'code': code,
+            'expires_at': datetime.now() + timedelta(minutes=10),
+            'verified': False
+        }
+        
+        # Send email
+        success = send_verification_email(email, code, user_name)
+        
+        if success:
+            return jsonify({
+                "message": "Verification code resent successfully",
+                "email": email
+            }), 200
+        else:
+            return jsonify({"error": "Failed to resend verification email"}), 500
+            
+    except Exception as e:
+        print(f"Error resending verification: {str(e)}")
+        return jsonify({"error": "Internal server error"}), 500
+
+@app.route("/api/auth/check-verification", methods=["POST"])
+def check_verification():
+    """Check if user's email is verified"""
+    try:
+        data = request.get_json()
+        email = data.get('email')
+        
+        if not email:
+            return jsonify({"error": "Email is required"}), 400
+        
+        # Check if verification exists and is verified
+        if email in verification_codes:
+            verification_data = verification_codes[email]
+            
+            # Check if not expired and verified
+            if datetime.now() <= verification_data['expires_at'] and verification_data['verified']:
+                return jsonify({"verified": True}), 200
+        
+        return jsonify({"verified": False}), 200
+        
+    except Exception as e:
+        print(f"Error checking verification: {str(e)}")
+        return jsonify({"error": "Internal server error"}), 500
+
 if __name__ == "__main__":
     app.run(debug=True)
