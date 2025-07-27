@@ -117,7 +117,7 @@ export const InsightCards = () => {
   }, [backendUrl]);
 
   return (
-    <div className="space-y-4 max-w-2xl mx-auto">
+    <div className="space-y-4 max-w-2xl mx-auto px-2">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-xl font-semibold text-foreground">AI Insights</h2>
         <Button variant="ghost" size="sm">View All</Button>
@@ -128,30 +128,30 @@ export const InsightCards = () => {
           <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary"></div>
         </div>
       ) : (
-        <div className="grid gap-4">
+        <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-1">
           {insights.map((insight, index) => {
             const IconComponent = insight.icon;
             return (
-              <Card 
+              <Card
                 key={index}
-                className="p-4 animate-fade-in bg-card border-0 shadow-card hover:shadow-elevated transition-shadow"
+                className="p-3 sm:p-4 w-full rounded-lg flex flex-col animate-fade-in bg-card border-0 shadow-card hover:shadow-elevated transition-shadow"
                 style={{ animationDelay: `${index * 0.1}s` }}
               >
-                <div className="flex items-start gap-4">
-                  <div className={`p-2 rounded-full ${insight.bgColor}`}>
+                <div className="flex flex-col sm:flex-row items-start gap-3 sm:gap-4">
+                  <div className={`p-2 rounded-full ${insight.bgColor} shrink-0 mb-2 sm:mb-0`}> 
                     <IconComponent className={`h-5 w-5 ${insight.color}`} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-medium text-card-foreground truncate">{insight.title}</h3>
+                    <div className="flex flex-wrap items-center gap-2 mb-1">
+                      <h3 className="font-medium text-card-foreground break-words w-full">{insight.title}</h3>
                       <span className="text-xs px-2 py-1 bg-muted rounded-full text-muted-foreground">
                         {insight.category}
                       </span>
                     </div>
-                    <p className="text-sm text-muted-foreground mb-3 leading-relaxed">
+                    <p className="text-sm text-muted-foreground mb-3 leading-relaxed break-words w-full">
                       {insight.description}
                     </p>
-                    <div className="flex gap-2 items-center">
+                    <div className="flex flex-wrap gap-2 items-center">
                       <Button size="sm" variant="outline" className="text-xs">
                         {insight.action}
                       </Button>
@@ -170,12 +170,12 @@ export const InsightCards = () => {
                             href={walletLinks[index]}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-xs text-primary underline ml-2"
+                            className="text-xs text-primary underline ml-2 break-all"
                           >
                             Open Wallet Link
                           </a>
                         ) : (
-                          <span className="text-xs text-destructive ml-2">{walletLinks[index]}</span>
+                          <span className="text-xs text-destructive ml-2 break-all">{walletLinks[index]}</span>
                         )
                       )}
                     </div>
