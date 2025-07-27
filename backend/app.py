@@ -384,7 +384,6 @@ def create_wallet_object():
     os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "gwallet_sa_keyfile.json"
     wallet_service = DemoGeneric()
     issuer_id = os.getenv("ISSUER_ID")
-    issuer_id = os.getenv("ISSUER_ID")
 
     # Get class_suffix from request body
     data = request.get_json()
@@ -1298,6 +1297,7 @@ def create_insight_pass():
     Creates a Google Wallet generic pass for a single insight.
     Expects a JSON body with keys: type (e.g. 'expenditure', 'perishables', 'health', 'recipes'), description, and optional details.
     """
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "gwallet_sa_keyfile.json"
     data = request.get_json(force=True)
     issuer_id = os.getenv("ISSUER_ID")
     class_suffix = "InsightClass"
@@ -1353,12 +1353,17 @@ def create_insight_pass():
             "id": "HEALTH_MODULE"
         })
 
+    # Ensure cardTitle is always present and non-empty
+    card_title = insight_type.capitalize() if insight_type else "Insight"
+    if not card_title:
+        card_title = "Insight"
+
     object_data = {
         "id": f"{issuer_id}.{object_suffix}",
         "classId": f"{issuer_id}.{class_suffix}",
         "state": "ACTIVE",
-        "cardTitle": {"defaultValue": {"language": "en-US", "value": insight_type.capitalize()}},
-        "header": {"defaultValue": {"language": "en-US", "value": description[:40]}},
+        "cardTitle": {"defaultValue": {"language": "en-US", "value": card_title}},
+        "header": {"defaultValue": {"language": "en-US", "value": description[:40] if description else card_title}},
         "hexBackgroundColor": "#4285f4",
         "logo": {
             "sourceUri": {
@@ -1368,15 +1373,25 @@ def create_insight_pass():
                 "defaultValue": {"language": "en-US", "value": "Generic card logo"}
             }
         },
-        "barcode": {"type": "QR_CODE", "value": description},
+        "barcode": {"type": "QR_CODE", "value": description if description else card_title},
         "textModulesData": text_modules
     }
 
     # Generate wallet link for the pass
     wallet_service = DemoGeneric()
+    object_suffix = wallet_service.create_object(
+        issuer_id, class_suffix, object_suffix, object_data
+    )
+    # If your wallet creation method requires object_data, pass it here
+    # For now, keep the same API as before
     save_link = wallet_service.create_jwt_existing_objects(
-    issuer_id, object_suffix, class_suffix)
+        issuer_id, object_suffix, class_suffix)
     return jsonify({
-        "saveUrl": save_link})
+        "saveUrl": save_link,
+        "object_data": object_data,
+        "object_suffix": object_suffix,
+        "class_suffix": class_suffix,
+        "reused": False
+    })
 if __name__ == "__main__":
     app.run(debug=True)
