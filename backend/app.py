@@ -1109,7 +1109,7 @@ def generate_insights_data():
             prev_week_total += amount
     weekly_trend = None
     if prev_week_total > 0:
-        weekly_trend = ((total_week - prev_week_total) / prev_week_total) * 100
+        weekly_trend = int(((total_week - prev_week_total) / prev_week_total) * 100)
     # --- Top Spending Category ---
     category_totals = {}
     class_suffix_to_category = {
@@ -1192,7 +1192,7 @@ def generate_insights_data():
         "You are an expert data insights provider agent. Analyze the provided list of dictionary. "
         "It contains details related to some kind of expenditure. Refer to tags (if present): 'items', 'textModulesData' and generate a JSON object with insights on following topics:\n"
         "    1. 'expenditure' — a short spending tip or alert.\n"
-        "    2. 'perishables' — a list of items about to expire soon.\n"
+        "    2. 'perishables' — a list of 2 items about to expire soon (check last 2 weeks' data).\n"
         "    3. 'health' — a tip or reminder about food diversity, freshness or wellness.\n"
         "    4. 'recipes' — suggest a recipe to reduce waste.\n"
         "Respond ONLY with a valid JSON object. Do not include any other text, explanations, or markdown formatting like ```json.\n"
@@ -1200,9 +1200,8 @@ def generate_insights_data():
         "{\n"
         '  "expenditure": "You’ve made several high-value purchases like a dining table and Bluetooth Care devices. Consider categorizing luxury and recurring expenses separately to improve budget clarity.",\n'
         '  "perishables": [\n'
-        '    "BANANAS (purchased in 2021) — likely expired",\n'
-        '    "Chapati (2025-03-30) — may be stale",\n'
-        '    "Mineral Water (2025-03-30) — check for seal and expiry date"\n'
+        '    "BANANAS (purchased last week) — likely over-riped",\n'
+        '    "Chapati (bought on 2025-07-30) — may be stale",\n'
         "  ],\n"
         '  "health": "While your meals include thalis and fruits like bananas, consider adding more fresh vegetables and avoiding frequent alcohol purchases to maintain a balanced diet.",\n'
         '  "recipes": {\n'

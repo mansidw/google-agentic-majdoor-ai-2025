@@ -43,6 +43,27 @@ export const InsightCards = () => {
         // Transform API response to card format
         const data = res.data;
         const cards = [];
+        if (data.weekly_spending_trend !== undefined && data.weekly_spending_trend !== null) {
+          let trendText = "No change in weekly spending.";
+          if (typeof data.weekly_spending_trend === "number") {
+            if (data.weekly_spending_trend > 0) {
+              trendText = `Spending increased by ${data.weekly_spending_trend.toFixed(1)}% compared to last week.`;
+            } else if (data.weekly_spending_trend < 0) {
+              trendText = `Spending decreased by ${Math.abs(data.weekly_spending_trend).toFixed(1)}% compared to last week.`;
+            } else {
+              trendText = "Spending is unchanged compared to last week.";
+            }
+          }
+          cards.push({
+            icon: TrendingUp,
+            title: "Weekly Trend",
+            description: trendText,
+            category: "Weekly Trend",
+            color: "text-info",
+            bgColor: "bg-info/10",
+            action: "View Details"
+          });
+        }
         if (data.expenditure) {
           cards.push({
             icon: TrendingUp,
