@@ -62,6 +62,7 @@ CORS(app)
 
 CLASS_SUFFIXES = ["GroceryClass"]
 issuer_id = os.getenv("ISSUER_ID")
+PORT = os.getenv("PORT", 5000)
 # Initialize the ADK Agent with our defined tools
 root_agent = Agent(
     name="GroceryInventoryAgent",  # Add a name (required by LlmAgent)
@@ -1176,4 +1177,4 @@ scheduler.add_job(run_insight_cron, "interval", minutes=2)
 scheduler.start()
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, port=PORT)

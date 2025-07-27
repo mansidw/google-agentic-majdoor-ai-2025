@@ -8,7 +8,8 @@
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "start": "npx serve dist -l 8080"
   },
   "dependencies": {
     "@emailjs/browser": "^4.4.1",
