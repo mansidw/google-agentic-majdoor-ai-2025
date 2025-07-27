@@ -181,9 +181,6 @@ psd
 thumb
 sketch
 
-frontend/package-lock.json
-frontend/package.json
-
 gwallet_sa_keyfile.json
 majdoor_ai_sa_firestore.json
 # End of https://www.toptal.com/developers/gitignore/api/flask,react
