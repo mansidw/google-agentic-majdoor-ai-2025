@@ -19,6 +19,12 @@ const ChatbotSiri: React.FC = () => {
   const [showLanguageSelector, setShowLanguageSelector] = useState(false);
   const recognitionRef = useRef<any>(null);
 
+  // Extract pay.google.com link from response
+  const extractGooglePayLink = (text: string): string | null => {
+    const linkMatch = text.match(/(https?:\/\/pay\.google\.com[^\s]*)/);
+    return linkMatch ? linkMatch[1] : null;
+  };
+
   // Get available voices for the selected language
   const getVoiceForLanguage = (langCode: string) => {
     if (!window.speechSynthesis) return null;
@@ -131,11 +137,24 @@ const ChatbotSiri: React.FC = () => {
           .join("\n");
         const prior_text =
           "Based on your requirements, Here are some offers I found \n";
-        setResponse(prior_text + offersText);
+        
+        // Check if response contains pay.google.com link
+        const fullResponse = prior_text + offersText;
+        if (fullResponse.includes("pay.google.com")) {
+          setResponse(fullResponse);
+        } else {
+          setResponse(null); // Don't render on screen
+        }
+        
         // Speak the offers
         speakOffers(data.offers);
       } else if (data.response) {
-        setResponse(data.response);
+        // Check if response contains pay.google.com link
+        if (data.response.includes("pay.google.com")) {
+          setResponse(data.response);
+        } else {
+          setResponse(null); // Don't render on screen, only speak
+        }
         speakText(data.response);
       } else {
         // Handle generic responses with language-specific fallbacks
@@ -147,7 +166,7 @@ const ChatbotSiri: React.FC = () => {
           fallbackResponses[
             selectedLanguage as keyof typeof fallbackResponses
           ] || fallbackResponses.en;
-        setResponse(fallbackText);
+        setResponse(null); // Don't render on screen, only speak
         speakText(fallbackText);
       }
     } catch (e) {
@@ -401,9 +420,41 @@ const ChatbotSiri: React.FC = () => {
                 fontSize: 20,
                 marginTop: 24,
                 whiteSpace: "pre-line",
+                textAlign: "center",
               }}
             >
-              {response}
+              {extractGooglePayLink(response) ? (
+                <button
+                  onClick={() => {
+                    const link = extractGooglePayLink(response);
+                    if (link) {
+                      window.open(link, '_blank');
+                    }
+                  }}
+                  style={{
+                    background: "linear-gradient(135deg, #4285f4, #34a853)",
+                    border: "none",
+                    color: "#fff",
+                    padding: "16px 32px",
+                    borderRadius: 12,
+                    fontSize: 18,
+                    fontWeight: "600",
+                    cursor: "pointer",
+                    boxShadow: "0 4px 16px rgba(66, 133, 244, 0.3)",
+                    transition: "transform 0.2s",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = "scale(1.05)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = "scale(1)";
+                  }}
+                >
+                  {selectedLanguage === "hi" ? "Google Pay में खोलें" : "Open in Google Pay"}
+                </button>
+              ) : (
+                response
+              )}
             </div>
           )}
         </div>

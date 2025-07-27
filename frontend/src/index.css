@@ -129,3 +129,40 @@ All colors MUST be HSL.
     @apply bg-background text-foreground;
   }
 }
+
+/* Markdown content styling */
+.markdown-content {
+  @apply text-card-foreground;
+}
+
+.markdown-content p:last-child {
+  @apply mb-0;
+}
+
+.markdown-content ul, .markdown-content ol {
+  @apply pl-4;
+}
+
+.markdown-content li {
+  @apply text-sm;
+}
+
+.markdown-content code {
+  @apply text-xs;
+}
+
+.markdown-content pre {
+  @apply rounded-md;
+}
+
+.markdown-content blockquote {
+  @apply border-l-primary/30;
+}
+
+.markdown-content table {
+  @apply text-xs;
+}
+
+.markdown-content a:hover {
+  @apply text-primary/60;
+}
