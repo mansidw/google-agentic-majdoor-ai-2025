@@ -5,20 +5,17 @@
 _Your AI-powered receipt manager and financial co-pilot for Google Wallet._
 
 ### Deployed Fi MCP Server 
-- *Google Cloud Run*
-- https://fi-mcp-dev-1003659322950.asia-southeast1.run.app/mcp/stream
-
+- *Google Cloud Run* - https://fi-mcp-dev-1003659322950.asia-southeast1.run.app/mcp/stream
+- *Artificat Reporitory* - asia-southeast1-docker.pkg.dev/global-impulse-467107-j6/cloud-run-source-deploy/fi-mcp-dev
 
 ### Deployed Backend
-- *Google Cloud Run*
-- https://backend-1003659322950.asia-southeast1.run.app
+- *Google Cloud Run* - https://backend-1003659322950.asia-southeast1.run.app
+- *Artificat Reporitory* - asia-southeast1-docker.pkg.dev/global-impulse-467107-j6/cloud-run-source-deploy/backend
 
 ### Deployed Frontend
-- *Google Cloud Run*
-- https://frontend-1003659322950.asia-southeast1.run.app
-
-- *Vercel*
-- https://google-agentic-majdoor-ai-2025-alpha.vercel.app/
+- *Google Cloud Run* - https://frontend-1003659322950.asia-southeast1.run.app
+- *Vercel* - https://google-agentic-majdoor-ai-2025-alpha.vercel.app/
+- *Artificat Reporitory* - asia-southeast1-docker.pkg.dev/global-impulse-467107-j6/cloud-run-source-deploy/frontend
 
 ## 🚀 The Problem
 Despite living in a digital age, we still find ourselves juggling physical receipts, they fade, get lost, or pile up in drawers. Keeping track of expenses becomes a tedious, manual task. Even with digital receipts, there’s little insight unless we go digging. People miss out on the full potential of their purchase history, whether it's optimizing their spending or taking advantage of relevant offers.
