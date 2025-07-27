@@ -1307,7 +1307,7 @@ def create_insight_pass():
     # 1. Search for existing pass
     full_class_id = f"{issuer_id}.{class_suffix}"
     existing_passes = fetch_wallet_passes(full_class_id)
-    for p in existing_passes:
+    '''for p in existing_passes:
         for tm in p.get("textModulesData", []):
             if (
                 tm.get("header", "").lower() == insight_type.lower()
@@ -1318,7 +1318,7 @@ def create_insight_pass():
                     "class_suffix": class_suffix,
                     "object_data": p,
                     "reused": True
-                })
+                })'''
 
     # 2. If not found, create new pass
     object_suffix = f"{insight_type}_{datetime.now().strftime('%Y%m%d%H%M%S')}"
@@ -1351,6 +1351,12 @@ def create_insight_pass():
             "header": "Health Tip",
             "body": details.get('tip', ''),
             "id": "HEALTH_MODULE"
+        })
+    elif insight_type == "weekly trend" and details:
+        text_modules.append({
+            "header": "Weekly Spending Trend",
+            "body": details.get('trend', ''),
+            "id": "WEEKLY_SPENDING_TREND_MODULE"
         })
 
     # Ensure cardTitle is always present and non-empty

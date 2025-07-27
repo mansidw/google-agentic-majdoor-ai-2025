@@ -58,7 +58,7 @@ export const InsightCards = () => {
             icon: TrendingUp,
             title: "Weekly Trend",
             description: trendText,
-            category: "Weekly Trend",
+            category: "Weekly_Trend",
             color: "text-info",
             bgColor: "bg-info/10",
             action: "View Details"
