@@ -7,7 +7,34 @@ import axios from "axios";
 export const InsightCards = () => {
   const [insights, setInsights] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [walletLinks, setWalletLinks] = useState<{[key: number]: string}>({});
+  const [walletLoading, setWalletLoading] = useState<{[key: number]: boolean}>({});
   const backendUrl = import.meta.env.VITE_BACKEND_URL;
+  const handleAddToWallet = async (insight: any, index: number) => {
+    setWalletLoading(prev => ({ ...prev, [index]: true }));
+    try {
+      const payload = {
+        type: insight.category.toLowerCase(),
+        description: insight.description,
+        details: insight.details || {}
+      };
+      const res = await axios.post(backendUrl + "/api/create-insight-pass", payload);
+      if (res.data.saveUrl) {
+        setWalletLinks(prev => ({ ...prev, [index]: res.data.saveUrl }));
+        // Directly open the link in a new tab
+        window.open(res.data.saveUrl, "_blank", "noopener,noreferrer");
+      } else if (res.data.object_data && res.data.object_data.id) {
+        setWalletLinks(prev => ({ ...prev, [index]: res.data.saveUrl || "" }));
+        if (res.data.saveUrl) {
+          window.open(res.data.saveUrl, "_blank", "noopener,noreferrer");
+        }
+      }
+    } catch (err) {
+      setWalletLinks(prev => ({ ...prev, [index]: "Error generating wallet link" }));
+    } finally {
+      setWalletLoading(prev => ({ ...prev, [index]: false }));
+    }
+  };
 
   useEffect(() => {
     setLoading(true);
@@ -52,7 +79,7 @@ export const InsightCards = () => {
         if (data.recipes) {
           cards.push({
             icon: BarChart3,
-            title: data.recipes.recipe_name || "Recipe Suggestion",
+            title: "Try it Out!! Recipes for food perishing fast--"+data.recipes.recipe_name || "Recipe Suggestion",
             description: data.recipes.description || "Try this recipe to reduce waste.",
             category: "Recipe",
             color: "text-primary",
@@ -93,7 +120,6 @@ export const InsightCards = () => {
                   <div className={`p-2 rounded-full ${insight.bgColor}`}>
                     <IconComponent className={`h-5 w-5 ${insight.color}`} />
                   </div>
-                  
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <h3 className="font-medium text-card-foreground truncate">{insight.title}</h3>
@@ -104,15 +130,33 @@ export const InsightCards = () => {
                     <p className="text-sm text-muted-foreground mb-3 leading-relaxed">
                       {insight.description}
                     </p>
-                    
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 items-center">
                       <Button size="sm" variant="outline" className="text-xs">
                         {insight.action}
                       </Button>
-                      <Button size="sm" className="text-xs bg-primary text-white border-primary hover:bg-white hover:text-primary hover:border-primary">
+                      <Button
+                        size="sm"
+                        className="text-xs bg-primary text-white border-primary hover:bg-white hover:text-primary hover:border-primary"
+                        disabled={walletLoading[index]}
+                        onClick={() => handleAddToWallet(insight, index)}
+                      >
                         <Wallet className="h-3 w-3 mr-1" />
-                        Add to Wallet
+                        {walletLoading[index] ? "Adding..." : "Add to Wallet"}
                       </Button>
+                      {walletLinks[index] && (
+                        walletLinks[index].startsWith("http") ? (
+                          <a
+                            href={walletLinks[index]}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-primary underline ml-2"
+                          >
+                            Open Wallet Link
+                          </a>
+                        ) : (
+                          <span className="text-xs text-destructive ml-2">{walletLinks[index]}</span>
+                        )
+                      )}
                     </div>
                   </div>
                 </div>
