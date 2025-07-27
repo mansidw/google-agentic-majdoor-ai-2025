@@ -1,6 +1,7 @@
 import React, { useState, useRef } from "react";
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://127.0.0.1:5000';
+const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://127.0.0.1:5000';
+const BACKEND_URL = `${backendUrl}/api/chat`;
 const SESSION_ID = "mcp-session-84427bd6-fc37-48b1-96e9-14116c131fd5";
 
 // Language configurations
