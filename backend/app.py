@@ -62,6 +62,7 @@ CORS(app)
 
 CLASS_SUFFIXES = ["GroceryClass"]
 issuer_id = os.getenv("ISSUER_ID")
+PORT = os.getenv("PORT", 5000)
 # Initialize the ADK Agent with our defined tools
 root_agent = Agent(
     name="GroceryInventoryAgent",  # Add a name (required by LlmAgent)
@@ -1393,4 +1394,4 @@ def create_insight_pass():
         "reused": False
     })
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, port=PORT)
