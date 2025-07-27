@@ -1083,6 +1083,112 @@ def generate_insights_data():
         full_class_id = f"{issuer_id}.{suffix}"
         class_passes = fetch_wallet_passes(full_class_id)
         all_passes.extend(class_passes)
+    # --- Calculate Weekly Spending Trend ---
+    # Get weekly and previous weekly expenditure
+    all_passes = all_passes  # already fetched above
+    filtered_week, total_week = process_passes_for_period(all_passes, "weekly")
+    # Calculate previous week
+    today = datetime.now().date()
+    prev_week_start = today - timedelta(days=7)
+    prev_week_end = today - timedelta(days=1)
+    prev_week_passes = []
+    prev_week_total = 0.0
+    for p in all_passes:
+        text_modules = p.get("textModulesData", [])
+        date_module = next((m for m in text_modules if m.get("id") == "DATE_MODULE"), None)
+        total_module = next((m for m in text_modules if m.get("id") == "TOTAL_MODULE"), None)
+        if not date_module or not total_module:
+            continue
+        try:
+            pass_date = datetime.strptime(date_module.get("body"), "%Y-%m-%d").date()
+            amount_str = total_module.get("body", "").split()[-1]
+            amount = float(amount_str)
+        except Exception:
+            continue
+        if prev_week_start <= pass_date <= prev_week_end:
+            prev_week_passes.append(p)
+            prev_week_total += amount
+    weekly_trend = None
+    if prev_week_total > 0:
+        weekly_trend = ((total_week - prev_week_total) / prev_week_total) * 100
+    # --- Top Spending Category ---
+    category_totals = {}
+    class_suffix_to_category = {
+        "GroceryClass": "groceries",
+        "TravelClass": "travel",
+        "HealthClass": "health",
+        "EntertainmentClass": "entertainment",
+        "EducationClass": "education",
+    }
+    for p in filtered_week:
+        class_id = p.get("classId", "")
+        class_suffix = None
+        if "." in class_id:
+            parts = class_id.split(".")
+            if len(parts) >= 2:
+                class_suffix = parts[1]
+        category = class_suffix_to_category.get(class_suffix, class_suffix or "Unknown")
+        total_module = next((m for m in p.get("textModulesData", []) if m.get("id") == "TOTAL_MODULE"), None)
+        if total_module:
+            try:
+                amount_str = total_module.get("body", "").split()[-1]
+                amount = float(amount_str)
+            except Exception:
+                amount = 0.0
+            category_totals[category] = category_totals.get(category, 0) + amount
+    top_category = max(category_totals, key=category_totals.get) if category_totals else None
+    # --- Monthly Budget Alert ---
+    # Assume a default budget for groceries (can be replaced with user config)
+    monthly_budget = 5000.0
+    filtered_month, total_month = process_passes_for_period(all_passes, "monthly")
+    groceries_spent = 0.0
+    for p in filtered_month:
+        class_id = p.get("classId", "")
+        class_suffix = None
+        if "." in class_id:
+            parts = class_id.split(".")
+            if len(parts) >= 2:
+                class_suffix = parts[1]
+        category = class_suffix_to_category.get(class_suffix, class_suffix or "Unknown")
+        if category == "groceries":
+            total_module = next((m for m in p.get("textModulesData", []) if m.get("id") == "TOTAL_MODULE"), None)
+            if total_module:
+                try:
+                    amount_str = total_module.get("body", "").split()[-1]
+                    amount = float(amount_str)
+                except Exception:
+                    amount = 0.0
+                groceries_spent += amount
+    budget_alert = None
+    if groceries_spent > monthly_budget:
+        budget_alert = f"Alert: You have exceeded your monthly groceries budget of ₹{monthly_budget}. Total spent: ₹{groceries_spent}."
+    elif groceries_spent > 0.8 * monthly_budget:
+        budget_alert = f"Warning: You have used {groceries_spent/monthly_budget*100:.1f}% of your groceries budget."
+    # --- Spending Anomaly ---
+    # Find unusually high or low expenditures in weekly data
+    item_spending = {}
+    for p in filtered_week:
+        items = []
+        for tm in p.get("textModulesData", []):
+            if tm.get("id") == "ITEMS_MODULE":
+                try:
+                    items = json.loads(tm.get("body", "[]"))
+                except Exception:
+                    items = []
+        for item in items:
+            desc = item.get("description", "Unknown")
+            price = item.get("price", 0.0)
+            item_spending[desc] = item_spending.get(desc, 0.0) + price
+    anomaly = None
+    if item_spending:
+        avg = sum(item_spending.values()) / len(item_spending)
+        high = [k for k, v in item_spending.items() if v > 2 * avg]
+        low = [k for k, v in item_spending.items() if v < 0.5 * avg]
+        if high:
+            anomaly = f"Unusually high spending on: {', '.join(high)}."
+        elif low:
+            anomaly = f"Unusually low spending on: {', '.join(low)}."
+    # --- LLM Insights ---
     prompt = (
         "You are an expert data insights provider agent. Analyze the provided list of dictionary. "
         "It contains details related to some kind of expenditure. Refer to tags (if present): 'items', 'textModulesData' and generate a JSON object with insights on following topics:\n"
@@ -1132,6 +1238,11 @@ def generate_insights_data():
         if response_text:
             try:
                 insights = json.loads(response_text)
+                # Add computed insights
+                insights["weekly_spending_trend"] = weekly_trend
+                insights["top_spending_category"] = top_category
+                insights["monthly_budget_alert"] = budget_alert
+                insights["spending_anomaly"] = anomaly
                 return insights
             except Exception:
                 return {
