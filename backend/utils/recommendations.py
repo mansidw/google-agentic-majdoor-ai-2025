@@ -34,7 +34,7 @@ CARD_RECOMMENDATIONS = {
                    "ICICI Platinum"],
 }
 
-FI_MCP_DEV_URL = os.getenv("FI_MCP_DEV_URL", "http://localhost:8080/mcp/stream")
+FI_MCP_DEV_URL = os.getenv("FI_MCP_DEV_URL")
 
 
 def fetch_bank_transactions(session_id):
